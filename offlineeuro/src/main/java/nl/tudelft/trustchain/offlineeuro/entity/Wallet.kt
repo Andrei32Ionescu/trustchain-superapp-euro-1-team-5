@@ -11,7 +11,9 @@ data class WalletEntry(
     val digitalEuro: DigitalEuro,
     val t: Element,
     val transactionSignature: SchnorrSignature?,
-    val timesSpent: Long = 0
+    val timesSpent: Long = 0,
+    val receivedTimestamp: Long = System.currentTimeMillis(),
+    val transferCount: Int = 0
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -21,7 +23,28 @@ data class WalletEntry(
         return this.digitalEuro == other.digitalEuro &&
             this.t == other.t &&
             this.transactionSignature == other.transactionSignature &&
-            this.timesSpent == other.timesSpent
+            this.timesSpent == other.timesSpent &&
+            this.receivedTimestamp == other.receivedTimestamp &&
+            this.transferCount == other.transferCount
+    }
+
+    fun calculateTransactionFee(): Double {
+        val currentTime = System.currentTimeMillis()
+        val timeInWallet = (currentTime - receivedTimestamp) / (1000 * 60 * 60)
+        
+        var fee = 0.01
+        
+        fee += (timeInWallet / 24) * 0.005
+        
+        fee += transferCount * 0.01
+        
+        return minOf(fee, 0.50)
+    }
+
+    fun getValueAfterFee(): Double {
+        val value = digitalEuro.serialNumber.toDoubleOrNull() ?: 0.0
+        val fee = calculateTransactionFee()
+        return value * (1.0 - fee)
     }
 }
 
@@ -64,8 +87,18 @@ class Wallet(
     ): TransactionDetails? {
         val walletEntry = walletManager.getNumberOfWalletEntriesToSpend(1).firstOrNull() ?: return null
         val euro = walletEntry.digitalEuro
+        
+        // Calculate the fee and update the value
+        val valueAfterFee = walletEntry.getValueAfterFee()
+        val newSerialNumber = String.format("%.2f", valueAfterFee)
+        
+        // Create a new digital euro with the updated value
+        val updatedEuro = euro.copy(serialNumber = newSerialNumber)
+        
         walletManager.incrementTimesSpent(euro)
-        return Transaction.createTransaction(privateKey, publicKey, walletEntry, randomizationElements, bilinearGroup, crs)
+        walletManager.incrementTransferCount(euro)
+        
+        return Transaction.createTransaction(privateKey, publicKey, walletEntry.copy(digitalEuro = updatedEuro), randomizationElements, bilinearGroup, crs)
     }
 
     fun doubleSpendEuro(

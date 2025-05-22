@@ -44,15 +44,15 @@ class Bank(
 
     fun createBlindSignature(
         challenge: BigInteger,
-        userPublicKey: Element
+        userPublicKey: Element,
+        amount: Double
     ): BigInteger {
         val k =
             lookUp(userPublicKey)
                 ?: return BigInteger.ZERO
         remove(userPublicKey)
 
-        onDataChangeCallback?.invoke("A token was withdrawn by $userPublicKey")
-        // <Subtract balance here>
+        onDataChangeCallback?.invoke("A token of €${String.format("%.2f", amount)} was withdrawn by $userPublicKey")
         return Schnorr.signBlindedChallenge(k, challenge, privateKey)
     }
 

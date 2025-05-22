@@ -251,7 +251,9 @@ class OfflineEuroCommunity(
     fun getBlindSignature(
         challenge: BigInteger,
         publicKeyBytes: ByteArray,
-        bankPublicKeyBytes: ByteArray
+        bankPublicKeyBytes: ByteArray,
+        amount: Double
+
     ) {
         val bankPeer = getPeerByPublicKeyBytes(bankPublicKeyBytes)
 
@@ -261,7 +263,8 @@ class OfflineEuroCommunity(
                 MessageID.GET_BLIND_SIGNATURE,
                 BlindSignatureRequestPayload(
                     challenge,
-                    publicKeyBytes
+                    publicKeyBytes,
+                    amount
                 )
             )
 
@@ -281,6 +284,7 @@ class OfflineEuroCommunity(
             BlindSignatureRequestMessage(
                 payload.challenge,
                 payload.publicKeyBytes,
+                payload.amount,
                 requestingPeer
             )
         addMessage(message)

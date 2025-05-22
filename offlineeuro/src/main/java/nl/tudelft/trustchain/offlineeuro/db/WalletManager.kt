@@ -18,23 +18,29 @@ class WalletManager(
     private val queries: WalletQueries = database.walletQueries
     private val walletEntryMapper = {
             serialNumber: String,
+            amount: Double,
             firstTheta: ByteArray,
             signature: ByteArray,
             previousProofs: ByteArray?,
             secretT: ByteArray,
             transactionSignature: ByteArray?,
-            timesSpent: Long
+            timesSpent: Long,
+            receivedTimestamp: Long,
+            transferCount: Long
         ->
         WalletEntry(
             DigitalEuro(
                 serialNumber,
+                amount,
                 group.gElementFromBytes(firstTheta),
                 deserializeSchnorr(signature)!!,
                 deserializeGSP(previousProofs)
             ),
             group.zrElementFromBytes(secretT),
             deserializeSchnorr(transactionSignature),
-            timesSpent
+            timesSpent,
+            receivedTimestamp,
+            transferCount.toInt()
         )
     }
 
@@ -57,6 +63,7 @@ class WalletManager(
 
         queries.insertWalletEntry(
             digitalEuro.serialNumber,
+            digitalEuro.amount,
             digitalEuro.firstTheta1.toBytes(),
             serialize(digitalEuro.signature)!!,
             serialize(digitalEuro.proofs),
@@ -106,5 +113,14 @@ class WalletManager(
 
     fun clearWalletEntries() {
         queries.clearWalletTable()
+    }
+
+    fun incrementTransferCount(digitalEuro: DigitalEuro) {
+        queries.incrementTransferCount(
+            digitalEuro.serialNumber,
+            digitalEuro.firstTheta1.toBytes(),
+            serialize(digitalEuro.signature)!!,
+            serialize(digitalEuro.proofs)
+        )
     }
 }

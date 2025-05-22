@@ -54,28 +54,34 @@ class User(
         return result
     }
 
-    fun withdrawDigitalEuro(bank: String): DigitalEuro {
+    fun withdrawDigitalEuro(bank: String, amount: Double): DigitalEuro {
+        if (amount <= 0.0) {
+            throw IllegalArgumentException("Amount must be positive")
+        }
+
         val serialNumber = UUID.randomUUID().toString()
         val firstT = group.getRandomZr()
         val tInv = firstT.mul(-1)
         val initialTheta = group.g.powZn(tInv).immutable
 
-        val bytesToSign = serialNumber.toByteArray() + initialTheta.toBytes()
+        val message = (serialNumber + ":" + String.format("%.2f", amount)).toByteArray() + initialTheta.toBytes()
 
         val bankRandomness = communicationProtocol.getBlindSignatureRandomness(publicKey, bank, group)
         val bankPublicKey = communicationProtocol.getPublicKeyOf(bank, group)
 
-        val blindedChallenge = Schnorr.createBlindedChallenge(bankRandomness, bytesToSign, bankPublicKey, group)
-        val blindSignature = communicationProtocol.requestBlindSignature(publicKey, bank, blindedChallenge.blindedChallenge)
+        val blindedChallenge = Schnorr.createBlindedChallenge(bankRandomness, message, bankPublicKey, group)
+        val blindSignature = communicationProtocol.requestBlindSignature(publicKey, bank, blindedChallenge.blindedChallenge, amount)
         val signature = Schnorr.unblindSignature(blindedChallenge, blindSignature)
-        val digitalEuro = DigitalEuro(serialNumber, initialTheta, signature, arrayListOf())
+        val digitalEuro = DigitalEuro(serialNumber, amount, initialTheta, signature, arrayListOf())
         wallet.addToWallet(digitalEuro, firstT)
-        onDataChangeCallback?.invoke("Withdrawn ${digitalEuro.serialNumber} successfully!")
+        onDataChangeCallback?.invoke("Withdrawn €${String.format("%.2f", amount)} successfully!")
         return digitalEuro
     }
 
-    fun getBalance(): Int {
-        return walletManager!!.getWalletEntriesToSpend().count()
+    fun getBalance(): Double {
+        return walletManager!!.getWalletEntriesToSpend().sumOf {
+            it.digitalEuro.amount
+        }
     }
 
     override fun onReceivedTransaction(
@@ -99,6 +105,6 @@ class User(
     override fun reset() {
         randomizationElementMap.clear()
         walletManager!!.clearWalletEntries()
-        setUp()
+       setUp()
     }
 }

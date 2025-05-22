@@ -195,8 +195,9 @@ object TableHelpers {
         mainButton.text = "Withdraw"
         mainButton.setOnClickListener {
             try {
-                val digitalEuro = user.withdrawDigitalEuro(bankName)
-                Toast.makeText(context, "Successfully withdrawn ${digitalEuro.serialNumber}", Toast.LENGTH_SHORT).show()
+                val amount = 1.00  // This should come from user input
+                val digitalEuro = user.withdrawDigitalEuro(bankName, amount)
+                Toast.makeText(context, "Successfully withdrawn €${String.format("%.2f", digitalEuro.amount)}", Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
                 Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
             }

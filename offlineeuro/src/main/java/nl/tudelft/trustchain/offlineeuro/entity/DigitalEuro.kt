@@ -19,6 +19,7 @@ import kotlin.String
 
 data class DigitalEuroBytes(
     val serialNumberBytes: ByteArray,
+    val amountBytes: ByteArray,
     val firstTheta1Bytes: ByteArray,
     val signatureBytes: ByteArray,
     val proofsBytes: ByteArray,
@@ -26,6 +27,7 @@ data class DigitalEuroBytes(
     fun toDigitalEuro(group: BilinearGroup): DigitalEuro {
         return DigitalEuro(
             serialNumberBytes.toString(Charsets.UTF_8),
+            amountBytes.toString(Charsets.UTF_8).toDouble(),
             group.gElementFromBytes(firstTheta1Bytes),
             SchnorrSignatureSerializer.deserializeSchnorrSignatureBytes(signatureBytes)!!,
             GrothSahaiSerializer.deserializeProofListBytes(proofsBytes, group)
@@ -35,6 +37,7 @@ data class DigitalEuroBytes(
 
 data class DigitalEuro(
     val serialNumber: String,
+    val amount: Double,
     val firstTheta1: Element,
     val signature: SchnorrSignature,
     val proofs: ArrayList<GrothSahaiProof> = arrayListOf(),
@@ -57,7 +60,9 @@ data class DigitalEuro(
         publicKeySigner: Element,
         group: BilinearGroup
     ): Boolean {
-        return Schnorr.verifySchnorrSignature(signature, publicKeySigner, group)
+        val message = (serialNumber + ":" + String.format("%.2f", amount)).toByteArray() + firstTheta1.toBytes()
+        return Schnorr.verifySchnorrSignature(signature, publicKeySigner, group) &&
+            signature.signedMessage.contentEquals(message)
     }
 
     fun serialize(): ByteArray {
@@ -85,6 +90,7 @@ data class DigitalEuro(
         val proofBytes = GrothSahaiSerializer.serializeGrothSahaiProofs(proofs)
         return DigitalEuroBytes(
             serialNumber.toByteArray(),
+            String.format("%.2f", amount).toByteArray(),
             firstTheta1.toBytes(),
             SchnorrSignatureSerializer.serializeSchnorrSignature(signature)!!,
             proofBytes ?: ByteArray(0)
