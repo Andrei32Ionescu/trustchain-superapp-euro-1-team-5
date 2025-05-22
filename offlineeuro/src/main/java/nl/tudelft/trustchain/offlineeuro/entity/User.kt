@@ -64,12 +64,13 @@ class User(
         val tInv = firstT.mul(-1)
         val initialTheta = group.g.powZn(tInv).immutable
 
-        val message = (serialNumber + ":" + String.format("%.2f", amount)).toByteArray() + initialTheta.toBytes()
+        val bytesToSign = serialNumber.toByteArray() + initialTheta.toBytes()
+
 
         val bankRandomness = communicationProtocol.getBlindSignatureRandomness(publicKey, bank, group)
         val bankPublicKey = communicationProtocol.getPublicKeyOf(bank, group)
 
-        val blindedChallenge = Schnorr.createBlindedChallenge(bankRandomness, message, bankPublicKey, group)
+        val blindedChallenge = Schnorr.createBlindedChallenge(bankRandomness, bytesToSign, bankPublicKey, group)
         val blindSignature = communicationProtocol.requestBlindSignature(publicKey, bank, blindedChallenge.blindedChallenge, amount)
         val signature = Schnorr.unblindSignature(blindedChallenge, blindSignature)
         val digitalEuro = DigitalEuro(serialNumber, amount, initialTheta, signature, arrayListOf())

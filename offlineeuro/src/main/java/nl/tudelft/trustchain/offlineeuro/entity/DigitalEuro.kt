@@ -60,9 +60,7 @@ data class DigitalEuro(
         publicKeySigner: Element,
         group: BilinearGroup
     ): Boolean {
-        val message = (serialNumber + ":" + String.format("%.2f", amount)).toByteArray() + firstTheta1.toBytes()
-        return Schnorr.verifySchnorrSignature(signature, publicKeySigner, group) &&
-            signature.signedMessage.contentEquals(message)
+        return Schnorr.verifySchnorrSignature(signature, publicKeySigner, group)
     }
 
     fun serialize(): ByteArray {

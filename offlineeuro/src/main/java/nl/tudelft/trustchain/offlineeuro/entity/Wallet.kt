@@ -31,20 +31,19 @@ data class WalletEntry(
     fun calculateTransactionFee(): Double {
         val currentTime = System.currentTimeMillis()
         val timeInWallet = (currentTime - receivedTimestamp) / (1000 * 60 * 60)
-        
+
         var fee = 0.01
-        
+
         fee += (timeInWallet / 24) * 0.005
-        
+
         fee += transferCount * 0.01
-        
+
         return minOf(fee, 0.50)
     }
 
     fun getValueAfterFee(): Double {
-        val value = digitalEuro.serialNumber.toDoubleOrNull() ?: 0.0
         val fee = calculateTransactionFee()
-        return value * (1.0 - fee)
+        return digitalEuro.amount * (1.00-fee)
     }
 }
 
@@ -87,18 +86,17 @@ class Wallet(
     ): TransactionDetails? {
         val walletEntry = walletManager.getNumberOfWalletEntriesToSpend(1).firstOrNull() ?: return null
         val euro = walletEntry.digitalEuro
-        
+
         // Calculate the fee and update the value
         val valueAfterFee = walletEntry.getValueAfterFee()
-        val newSerialNumber = String.format("%.2f", valueAfterFee)
-        
+
         // Create a new digital euro with the updated value
-        val updatedEuro = euro.copy(serialNumber = newSerialNumber)
-        
+        val updatedEuro = euro.copy(amount = valueAfterFee)
+
         walletManager.incrementTimesSpent(euro)
         walletManager.incrementTransferCount(euro)
-        
-        return Transaction.createTransaction(privateKey, publicKey, walletEntry.copy(digitalEuro = updatedEuro), randomizationElements, bilinearGroup, crs)
+
+        return Transaction.createTransaction(privateKey, publicKey, walletEntry, randomizationElements, bilinearGroup, crs)
     }
 
     fun doubleSpendEuro(
