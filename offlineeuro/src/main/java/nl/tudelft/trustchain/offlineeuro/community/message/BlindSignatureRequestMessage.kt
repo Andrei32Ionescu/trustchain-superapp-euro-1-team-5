@@ -7,7 +7,7 @@ import java.time.temporal.TemporalAmount
 class BlindSignatureRequestMessage(
     val challenge: BigInteger,
     val publicKeyBytes: ByteArray,
-    val amount: Double,
+    val amount: Long,
     val peer: Peer
 ) : ICommunityMessage {
     override val messageType = CommunityMessageType.BlindSignatureRequestMessage

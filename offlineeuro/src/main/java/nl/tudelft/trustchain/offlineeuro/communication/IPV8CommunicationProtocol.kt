@@ -33,6 +33,7 @@ import nl.tudelft.trustchain.offlineeuro.entity.User
 import nl.tudelft.trustchain.offlineeuro.enums.Role
 import nl.tudelft.trustchain.offlineeuro.libraries.GrothSahaiSerializer
 import java.math.BigInteger
+import android.util.Log
 
 class IPV8CommunicationProtocol(
     val addressBookManager: AddressBookManager,
@@ -85,7 +86,7 @@ class IPV8CommunicationProtocol(
         publicKey: Element,
         bankName: String,
         challenge: BigInteger,
-        amount: Double
+        amount: Long
     ): BigInteger {
         val bankAddress = addressBookManager.getAddressByName(bankName)
         community.getBlindSignature(challenge, publicKey.toBytes(),bankAddress.peerPublicKey!!,amount)
@@ -114,6 +115,8 @@ class IPV8CommunicationProtocol(
             peerAddress.peerPublicKey!!,
             transactionDetails.toTransactionDetailsBytes()
         )
+        // Log.d("IPV8Protocol", "Sent transaction details to $userNameReceiver")
+
         val message = waitForMessage(CommunityMessageType.TransactionResultMessage) as TransactionResultMessage
         return message.result
     }

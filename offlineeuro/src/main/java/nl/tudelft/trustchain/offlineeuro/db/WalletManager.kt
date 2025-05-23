@@ -18,7 +18,7 @@ class WalletManager(
     private val queries: WalletQueries = database.walletQueries
     private val walletEntryMapper = {
             serialNumber: String,
-            amount: Double,
+            amount: Long,
             firstTheta: ByteArray,
             signature: ByteArray,
             previousProofs: ByteArray?,

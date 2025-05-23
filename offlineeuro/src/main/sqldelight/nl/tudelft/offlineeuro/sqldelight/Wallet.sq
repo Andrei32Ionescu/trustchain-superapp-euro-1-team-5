@@ -1,7 +1,7 @@
 createWalletTable:
 CREATE TABLE IF NOT EXISTS Wallet (
     serialNumber TEXT NOT NULL,
-    amount REAL NOT NULL,
+    amount INTEGER NOT NULL,
     firstTheta1 BLOB NOT NULL,
     signature BLOB NOT NULL,
     previousProofs BLOB,

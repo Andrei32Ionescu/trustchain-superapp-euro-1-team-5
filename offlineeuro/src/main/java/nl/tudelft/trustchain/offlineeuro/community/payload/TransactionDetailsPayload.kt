@@ -19,10 +19,10 @@ class TransactionDetailsPayload(
         // Add the Digital Euro Part
         val digitalEuroBytes = transactionDetailsBytes.digitalEuroBytes
         payload += serializeVarLen(digitalEuroBytes.serialNumberBytes)
+        payload += serializeVarLen(digitalEuroBytes.amountBytes)
         payload += serializeVarLen(digitalEuroBytes.firstTheta1Bytes)
         payload += serializeVarLen(digitalEuroBytes.signatureBytes)
         payload += serializeVarLen(digitalEuroBytes.proofsBytes)
-        payload += serializeVarLen(digitalEuroBytes.amountBytes)
 
 
 

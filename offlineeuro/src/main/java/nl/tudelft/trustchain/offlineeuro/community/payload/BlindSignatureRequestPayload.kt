@@ -9,13 +9,13 @@ import java.math.BigInteger
 class BlindSignatureRequestPayload(
     val challenge: BigInteger,
     val publicKeyBytes: ByteArray,
-    val amount: Double
+    val amount: Long
 ) : Serializable {
     override fun serialize(): ByteArray {
         var payload = ByteArray(0)
         payload += serializeVarLen(challenge.toByteArray())
         payload += serializeVarLen(publicKeyBytes)
-        payload += serializeVarLen(amount.toBigDecimal().unscaledValue().toByteArray())
+        payload += serializeVarLen(amount.toString().toByteArray())
         return payload
     }
 
@@ -34,7 +34,7 @@ class BlindSignatureRequestPayload(
 
             val (amountBytes, amountSize)= deserializeVarLen(buffer,localOffset)
             localOffset+=amountSize
-            val amount = BigInteger(amountBytes).toBigDecimal().movePointLeft(2).toDouble()
+            val amount = String(amountBytes).toLong()
 
             return Pair(
                 BlindSignatureRequestPayload(BigInteger(challengeBytes), publicKeyBytes,amount),

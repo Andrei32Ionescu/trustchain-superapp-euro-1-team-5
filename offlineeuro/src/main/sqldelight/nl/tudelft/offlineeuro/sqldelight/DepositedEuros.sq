@@ -1,7 +1,7 @@
 createDepositedEurosTable:
 CREATE TABLE IF NOT EXISTS DepositedEuros (
         serialNumber TEXT NOT NULL,
-        amount REAL NOT NULL,  -- Add amount field
+        amount INTEGER NOT NULL,  -- Add amount field
         firstTheta1 BLOB NOT NULL,
         signature BLOB NOT NULL,
         proofs BLOB

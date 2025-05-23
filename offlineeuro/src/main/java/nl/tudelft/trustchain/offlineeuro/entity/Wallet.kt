@@ -41,9 +41,11 @@ data class WalletEntry(
         return minOf(fee, 0.50)
     }
 
-    fun getValueAfterFee(): Double {
+    fun getValueAfterFee(): Long {
         val fee = calculateTransactionFee()
-        return digitalEuro.amount * (1.00-fee)
+        val left = (digitalEuro.amount.toFloat() * (1.00-fee)).toLong()
+
+        return left
     }
 }
 
@@ -95,8 +97,9 @@ class Wallet(
 
         walletManager.incrementTimesSpent(euro)
         walletManager.incrementTransferCount(euro)
+        val updatedEntry = walletEntry.copy( digitalEuro = updatedEuro )
 
-        return Transaction.createTransaction(privateKey, publicKey, walletEntry, randomizationElements, bilinearGroup, crs)
+        return Transaction.createTransaction(privateKey, publicKey, updatedEntry, randomizationElements, bilinearGroup, crs)
     }
 
     fun doubleSpendEuro(

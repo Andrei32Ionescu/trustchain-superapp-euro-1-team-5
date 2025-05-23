@@ -27,7 +27,7 @@ data class DigitalEuroBytes(
     fun toDigitalEuro(group: BilinearGroup): DigitalEuro {
         return DigitalEuro(
             serialNumberBytes.toString(Charsets.UTF_8),
-            amountBytes.toString(Charsets.UTF_8).toDouble(),
+            amountBytes.toString(Charsets.UTF_8).toLong(),
             group.gElementFromBytes(firstTheta1Bytes),
             SchnorrSignatureSerializer.deserializeSchnorrSignatureBytes(signatureBytes)!!,
             GrothSahaiSerializer.deserializeProofListBytes(proofsBytes, group)
@@ -37,7 +37,7 @@ data class DigitalEuroBytes(
 
 data class DigitalEuro(
     val serialNumber: String,
-    val amount: Double,
+    val amount: Long,
     val firstTheta1: Element,
     val signature: SchnorrSignature,
     val proofs: ArrayList<GrothSahaiProof> = arrayListOf(),
@@ -88,7 +88,7 @@ data class DigitalEuro(
         val proofBytes = GrothSahaiSerializer.serializeGrothSahaiProofs(proofs)
         return DigitalEuroBytes(
             serialNumber.toByteArray(),
-            String.format("%.2f", amount).toByteArray(),
+            amount.toString().toByteArray(),
             firstTheta1.toBytes(),
             SchnorrSignatureSerializer.serializeSchnorrSignature(signature)!!,
             proofBytes ?: ByteArray(0)

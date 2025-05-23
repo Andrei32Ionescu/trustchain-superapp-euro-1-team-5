@@ -54,7 +54,7 @@ class User(
         return result
     }
 
-    fun withdrawDigitalEuro(bank: String, amount: Double): DigitalEuro {
+    fun withdrawDigitalEuro(bank: String, amount: Long): DigitalEuro {
         if (amount <= 0.0) {
             throw IllegalArgumentException("Amount must be positive")
         }
@@ -75,11 +75,11 @@ class User(
         val signature = Schnorr.unblindSignature(blindedChallenge, blindSignature)
         val digitalEuro = DigitalEuro(serialNumber, amount, initialTheta, signature, arrayListOf())
         wallet.addToWallet(digitalEuro, firstT)
-        onDataChangeCallback?.invoke("Withdrawn €${String.format("%.2f", amount)} successfully!")
+        onDataChangeCallback?.invoke("Withdrawn €${amount.toFloat()/100.0} successfully!")
         return digitalEuro
     }
 
-    fun getBalance(): Double {
+    fun getBalance(): Long {
         return walletManager!!.getWalletEntriesToSpend().sumOf {
             it.digitalEuro.amount
         }
@@ -90,6 +90,7 @@ class User(
         publicKeyBank: Element,
         publicKeySender: Element
     ): String {
+//        onDataChangeCallback?.invoke("ENTERED RECEIVE FUNCTION")
         val usedRandomness = lookUpRandomness(publicKeySender) ?: return "Randomness Not found!"
         removeRandomness(publicKeySender)
         val transactionResult = Transaction.validate(transactionDetails, publicKeyBank, group, crs)

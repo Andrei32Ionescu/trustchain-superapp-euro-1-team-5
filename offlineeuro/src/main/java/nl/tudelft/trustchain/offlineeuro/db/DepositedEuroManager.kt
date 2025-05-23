@@ -16,7 +16,7 @@ class DepositedEuroManager(
     private val queries: DepositedEurosQueries = database.depositedEurosQueries
     private val digitalEuroMapper = {
             serialNumber: String,
-            amount: Double,
+            amount: Long,
             firstTheta: ByteArray,
             signature: ByteArray,
             previousProofs: ByteArray?,

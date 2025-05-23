@@ -29,7 +29,7 @@ interface ICommunicationProtocol {
         publicKey: Element,
         bankName: String,
         challenge: BigInteger,
-        amount: Double
+        amount: Long
     ): BigInteger
 
     fun requestTransactionRandomness(
