@@ -1,6 +1,7 @@
 package nl.tudelft.trustchain.offlineeuro.entity
 
 import android.content.Context
+import android.util.Log
 import it.unisa.dia.gas.jpbc.Element
 import nl.tudelft.trustchain.offlineeuro.communication.ICommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.cryptography.BilinearGroup
@@ -94,10 +95,10 @@ class User(
         val usedRandomness = lookUpRandomness(publicKeySender) ?: return "Randomness Not found!"
         removeRandomness(publicKeySender)
         val transactionResult = Transaction.validate(transactionDetails, publicKeyBank, group, crs)
-
         if (transactionResult.valid) {
             wallet.addToWallet(transactionDetails, usedRandomness)
-            onDataChangeCallback?.invoke("Received an euro from $publicKeySender")
+            val amount = transactionDetails.digitalEuro.amount
+            onDataChangeCallback?.invoke("Received ${amount.toFloat()/100.0} euro from $publicKeySender")
             return transactionResult.description
         }
         onDataChangeCallback?.invoke(transactionResult.description)
@@ -107,6 +108,6 @@ class User(
     override fun reset() {
         randomizationElementMap.clear()
         walletManager!!.clearWalletEntries()
-       setUp()
+        setUp()
     }
 }

@@ -89,7 +89,8 @@ class Bank(
         if (duplicateEuros.isEmpty()) {
             depositedEuroLogger.add(Pair(euro.serialNumber, false))
             depositedEuroManager.insertDigitalEuro(euro)
-            onDataChangeCallback?.invoke("An euro was deposited successfully by $publicKeyUser")
+            val amount = euro.amount.toFloat()/100.0
+            onDataChangeCallback?.invoke("$amount euro was deposited successfully by $publicKeyUser")
             return "Deposit was successful!"
         }
 
