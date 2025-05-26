@@ -80,6 +80,50 @@ class Wallet(
     fun getAllWalletEntriesToSpend(): List<WalletEntry> {
         return walletManager.getWalletEntriesToSpend()
     }
+    fun getAllWalletEntriesToDoubleSpend(): List<WalletEntry>{
+        return walletManager.getWalletEntriesToDoubleSpend()
+    }
+    // Spend a specific wallet entry by its digital euro
+    fun spendSpecificEuro(
+        digitalEuro: DigitalEuro,
+        randomizationElements: RandomizationElements,
+        bilinearGroup: BilinearGroup,
+        crs: CRS
+    ): TransactionDetails? {
+        val walletEntry = walletManager.getWalletEntryByDigitalEuro(digitalEuro) ?: return null
+
+        // Check if this token is spendable (not already spent)
+        if (walletEntry.timesSpent > 0) return null
+
+        // Calculate the fee and update the value
+        val valueAfterFee = walletEntry.getValueAfterFee()
+
+        // Create a new digital euro with the updated value
+        val updatedEuro = digitalEuro.copy(amount = valueAfterFee)
+
+        walletManager.incrementTimesSpent(digitalEuro)
+        walletManager.incrementTransferCount(digitalEuro)
+        val updatedEntry = walletEntry.copy(digitalEuro = updatedEuro)
+
+        return Transaction.createTransaction(privateKey, publicKey, updatedEntry, randomizationElements, bilinearGroup, crs)
+    }
+
+    // Double spend a specific wallet entry by its digital euro
+    fun doubleSpendSpecificEuro(
+        digitalEuro: DigitalEuro,
+        randomizationElements: RandomizationElements,
+        bilinearGroup: BilinearGroup,
+        crs: CRS
+    ): TransactionDetails? {
+        val walletEntry = walletManager.getWalletEntryByDigitalEuro(digitalEuro) ?: return null
+
+        // Check if this token can be double spent (spent exactly once)
+        if (walletEntry.timesSpent != 1L) return null
+
+        walletManager.incrementTimesSpent(digitalEuro)
+
+        return Transaction.createTransaction(privateKey, publicKey, walletEntry, randomizationElements, bilinearGroup, crs)
+    }
 
     fun spendEuro(
         randomizationElements: RandomizationElements,
