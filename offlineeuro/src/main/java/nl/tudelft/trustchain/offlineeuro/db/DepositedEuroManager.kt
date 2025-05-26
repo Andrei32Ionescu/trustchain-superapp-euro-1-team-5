@@ -38,7 +38,7 @@ class DepositedEuroManager(
     }
 
     fun insertDigitalEuro(digitalEuro: DigitalEuro) {
-        val (serialNumber, amount,firstTheta1, signature, proofs) = digitalEuro
+        val (serialNumber, originalAmount, amount, firstTheta1, signature, proofs) = digitalEuro
         queries.insertDepositedEuro(
             serialNumber,
             originalAmount,
@@ -50,7 +50,7 @@ class DepositedEuroManager(
     }
 
     fun getDigitalEurosByDescriptor(digitalEuro: DigitalEuro): List<DigitalEuro> {
-        val (serialNumber,amount, firstTheta1, signature, _) = digitalEuro
+        val (serialNumber, originalAmount, amount, firstTheta1, signature, _) = digitalEuro
         return queries.getDepositedEuroByDescriptor(
             serialNumber,
             originalAmount,     // Use original amount since it is signed

@@ -36,19 +36,16 @@ class User(
         wallet = Wallet(privateKey, publicKey, walletManager!!)
     }
 
-    fun sendDigitalEuroTo(nameReceiver: String): Array<String> {
-        val randomizationElements1 = communicationProtocol.requestTransactionRandomness(nameReceiver, group)
-        val randomizationElements2 = communicationProtocol.requestTransactionRandomness(nameReceiver, group)
+    fun sendDigitalEuroTo(nameReceiver: String, amount: Long? = null): String {
+        val randomizationElements = communicationProtocol.requestTransactionRandomness(nameReceiver, group)
         val transactionDetails =
-            wallet.spendEuro(randomizationElements1, randomizationElements2, group, crs)
+            wallet.spendEuro(randomizationElements, group, crs, amount)
                 ?: throw Exception("No euro to spend")
 
-        val result1 = communicationProtocol.sendTransactionDetails(nameReceiver, transactionDetails[0])
-        onDataChangeCallback?.invoke(result1)
+        val result = communicationProtocol.sendTransactionDetails(nameReceiver, transactionDetails)
+        onDataChangeCallback?.invoke(result)
 
-        val result2 = communicationProtocol.sendTransactionDetails(nameReceiver, transactionDetails[1])
-        onDataChangeCallback?.invoke(result2)
-        return arrayOf(result1, result2)
+        return result
     }
 
     fun doubleSpendDigitalEuroTo(nameReceiver: String): String {
@@ -78,7 +75,7 @@ class User(
         val blindedChallenge = Schnorr.createBlindedChallenge(bankRandomness, bytesToSign, bankPublicKey, group)
         val blindSignature = communicationProtocol.requestBlindSignature(publicKey, bank, blindedChallenge.blindedChallenge, amount)
         val signature = Schnorr.unblindSignature(blindedChallenge, blindSignature)
-        val digitalEuro = DigitalEuro(serialNumber, amount, initialTheta, signature, arrayListOf())
+        val digitalEuro = DigitalEuro(serialNumber, amount, amount, initialTheta, signature, arrayListOf())
         wallet.addToWallet(digitalEuro, firstT)
         onDataChangeCallback?.invoke("Withdrawn €${amount.toFloat()/100.0} successfully!")
         return digitalEuro

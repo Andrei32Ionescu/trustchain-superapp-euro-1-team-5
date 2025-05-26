@@ -1,5 +1,8 @@
 package nl.tudelft.trustchain.offlineeuro.ui
 
+import android.app.AlertDialog
+import android.text.InputType
+import android.widget.EditText
 import android.content.Context
 import android.view.ContextThemeWrapper
 import android.view.Gravity
@@ -208,8 +211,7 @@ object TableHelpers {
             try {
                 val depositResult = user.sendDigitalEuroTo(bankName)
 
-                Toast.makeText(context, depositResult[0], Toast.LENGTH_SHORT).show()
-                Toast.makeText(context, depositResult[1], Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, depositResult, Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
                 Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
             }
@@ -225,10 +227,12 @@ object TableHelpers {
     ) {
         mainButton.text = "Send Euro"
         mainButton.setOnClickListener {
-            try {
-                val result = user.sendDigitalEuroTo(userName)
-            } catch (e: Exception) {
-                Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
+            showAmountInputDialog(context) { amount ->
+                try {
+                    val result = user.sendDigitalEuroTo(userName, amount)
+                } catch (e: Exception) {
+                    Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
+                }
             }
         }
 
@@ -240,6 +244,43 @@ object TableHelpers {
                 Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    private fun showAmountInputDialog(
+        context: Context,
+        onNumberEntered: (Long) -> Unit
+    ) {
+        val builder = AlertDialog.Builder(context)
+        builder.setTitle("Select Amount")
+
+        val input = EditText(context)
+
+        input.inputType = InputType.TYPE_CLASS_NUMBER // Allow only number input
+
+        builder.setView(input)
+        // Set up the buttons
+        builder.setPositiveButton("OK") { dialog, _ ->
+            val inputText = input.text.toString()
+            if (inputText.isNotEmpty()) {
+                try {
+                    val enteredNumber = inputText.toLong()
+                    onNumberEntered(enteredNumber)
+                } catch (e: NumberFormatException) {
+                    println("Error: Invalid number entered. ${e.message}")
+                    Toast.makeText(context, "Invalid number entered", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                // Handle empty input if necessary, or let it be (no action)
+                println("Warning: No number entered.")
+                Toast.makeText(context, "Please enter a number", Toast.LENGTH_SHORT).show()
+            }
+            dialog.dismiss()
+        }
+
+        builder.setNegativeButton("Cancel") { dialog, _ ->
+            dialog.cancel() // or dialog.dismiss()
+        }
+        builder.show()
     }
 
     fun layoutParams(weight: Float): LinearLayout.LayoutParams {

@@ -38,7 +38,7 @@ data class WalletEntry(
 
         fee += transferCount * 0.01
 
-        return minOf(fee, 0.20)
+        return minOf(fee, 0.50)
     }
 
     fun getValueAfterFee(): Long {
@@ -82,33 +82,41 @@ class Wallet(
     }
 
     fun spendEuro(
-        randomizationElements1: RandomizationElements,
-        randomizationElements2: RandomizationElements,
+        randomizationElements: RandomizationElements,
         bilinearGroup: BilinearGroup,
-        crs: CRS
-    ): Array<TransactionDetails>? {
+        crs: CRS,
+        _amount: Long?
+    ): TransactionDetails? {
         val walletEntry = walletManager.getNumberOfWalletEntriesToSpend(1).firstOrNull() ?: return null
         val euro = walletEntry.digitalEuro
 
         // Calculate the fee and update the value
         val valueAfterFee = walletEntry.getValueAfterFee()
 
+        var amount = euro.amount
+
+        if (_amount != null) {
+            amount = _amount;
+        }
+
         // Create a new digital euro with the updated value
-        val updatedEuro = euro.copy(amount = valueAfterFee)
-        val differenceEuro = euro.copy(amount = euro.amount - valueAfterFee)
+        val euroToSend = euro.copy(amount = amount)
 
 
-        walletManager.incrementTimesSpent(euro)
+        if (valueAfterFee - amount < 0L) {
+            throw Exception("Insufficient amount")
+        }
+        if (valueAfterFee - amount == 0L) {
+            walletManager.incrementTimesSpent(euro)
+        }
+        walletManager.updateAmount(euro, valueAfterFee - amount)
+
         walletManager.incrementTransferCount(euro)
-        val updatedEntry = walletEntry.copy( digitalEuro = updatedEuro )
+        val updatedEntry = walletEntry.copy( digitalEuro = euroToSend )
 
-        val differenceEntry = walletEntry.copy( digitalEuro = differenceEuro )
+        val t1 = Transaction.createTransaction(privateKey, publicKey, updatedEntry, randomizationElements, bilinearGroup, crs)
 
-
-        val t1 = Transaction.createTransaction(privateKey, publicKey, updatedEntry, randomizationElements1, bilinearGroup, crs)
-        val t2 = Transaction.createTransaction(privateKey, publicKey, differenceEntry, randomizationElements2, bilinearGroup, crs)
-
-        return arrayOf(t1,t2);
+        return t1;
     }
 
     fun doubleSpendEuro(

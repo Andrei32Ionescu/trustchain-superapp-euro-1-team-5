@@ -18,6 +18,7 @@ class WalletManager(
     private val queries: WalletQueries = database.walletQueries
     private val walletEntryMapper = {
             serialNumber: String,
+            originalAmount: Long,
             amount: Long,
             firstTheta: ByteArray,
             signature: ByteArray,
@@ -31,6 +32,7 @@ class WalletManager(
         WalletEntry(
             DigitalEuro(
                 serialNumber,
+                originalAmount,
                 amount,
                 group.gElementFromBytes(firstTheta),
                 deserializeSchnorr(signature)!!,
@@ -63,6 +65,7 @@ class WalletManager(
 
         queries.insertWalletEntry(
             digitalEuro.serialNumber,
+            digitalEuro.originalAmount,
             digitalEuro.amount,
             digitalEuro.firstTheta1.toBytes(),
             serialize(digitalEuro.signature)!!,
@@ -91,6 +94,16 @@ class WalletManager(
 
     fun getWalletEntriesToDoubleSpend(): List<WalletEntry> {
         return queries.getWalletEntriesToDoubleSpend(walletEntryMapper).executeAsList()
+    }
+
+    fun updateAmount(digitalEuro: DigitalEuro, amount: Long) {
+        queries.updateAmount(
+            amount,
+            digitalEuro.serialNumber,
+            digitalEuro.firstTheta1.toBytes(),
+            serialize(digitalEuro.signature)!!,
+            serialize(digitalEuro.proofs)
+        )
     }
 
     fun incrementTimesSpent(digitalEuro: DigitalEuro) {
