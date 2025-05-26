@@ -39,7 +39,11 @@ class User(
     // Send a specific digital euro to a receiver
     fun sendSpecificDigitalEuroTo(digitalEuro: DigitalEuro, nameReceiver: String): String {
         val randomizationElements = communicationProtocol.requestTransactionRandomness(nameReceiver, group)
-        val transactionDetails = wallet.spendSpecificEuro(digitalEuro, randomizationElements, group, crs)
+        var deposit = false
+        if (nameReceiver.lowercase().contains("bank")) {
+            deposit = true
+        }
+        val transactionDetails = wallet.spendSpecificEuro(digitalEuro, randomizationElements, group, crs, deposit)
             ?: throw Exception("Cannot spend this specific euro")
 
         val result = communicationProtocol.sendTransactionDetails(nameReceiver, transactionDetails)
@@ -59,8 +63,12 @@ class User(
 
     fun sendDigitalEuroTo(nameReceiver: String): String {
         val randomizationElements = communicationProtocol.requestTransactionRandomness(nameReceiver, group)
+        var deposit = false
+        if (nameReceiver.lowercase().contains("bank")) {
+            deposit = true
+        }
         val transactionDetails =
-            wallet.spendEuro(randomizationElements, group, crs)
+            wallet.spendEuro(randomizationElements, group, crs, deposit)
                 ?: throw Exception("No euro to spend")
 
         val result = communicationProtocol.sendTransactionDetails(nameReceiver, transactionDetails)
