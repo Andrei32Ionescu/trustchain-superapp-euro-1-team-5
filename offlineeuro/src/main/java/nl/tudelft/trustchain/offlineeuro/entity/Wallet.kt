@@ -38,7 +38,7 @@ data class WalletEntry(
 
         fee += transferCount * 0.01
 
-        return minOf(fee, 0.50)
+        return minOf(fee, 0.20)
     }
 
     fun getValueAfterFee(): Long {
@@ -82,10 +82,11 @@ class Wallet(
     }
 
     fun spendEuro(
-        randomizationElements: RandomizationElements,
+        randomizationElements1: RandomizationElements,
+        randomizationElements2: RandomizationElements,
         bilinearGroup: BilinearGroup,
         crs: CRS
-    ): TransactionDetails? {
+    ): Array<TransactionDetails>? {
         val walletEntry = walletManager.getNumberOfWalletEntriesToSpend(1).firstOrNull() ?: return null
         val euro = walletEntry.digitalEuro
 
@@ -94,12 +95,20 @@ class Wallet(
 
         // Create a new digital euro with the updated value
         val updatedEuro = euro.copy(amount = valueAfterFee)
+        val differenceEuro = euro.copy(amount = euro.amount - valueAfterFee)
+
 
         walletManager.incrementTimesSpent(euro)
         walletManager.incrementTransferCount(euro)
         val updatedEntry = walletEntry.copy( digitalEuro = updatedEuro )
 
-        return Transaction.createTransaction(privateKey, publicKey, updatedEntry, randomizationElements, bilinearGroup, crs)
+        val differenceEntry = walletEntry.copy( digitalEuro = differenceEuro )
+
+
+        val t1 = Transaction.createTransaction(privateKey, publicKey, updatedEntry, randomizationElements1, bilinearGroup, crs)
+        val t2 = Transaction.createTransaction(privateKey, publicKey, differenceEntry, randomizationElements2, bilinearGroup, crs)
+
+        return arrayOf(t1,t2);
     }
 
     fun doubleSpendEuro(

@@ -89,7 +89,7 @@ class IPV8CommunicationProtocol(
         amount: Long
     ): BigInteger {
         val bankAddress = addressBookManager.getAddressByName(bankName)
-        community.getBlindSignature(challenge, publicKey.toBytes(),bankAddress.peerPublicKey!!,amount)
+        community.getBlindSignature(challenge, publicKey.toBytes(),bankAddress.peerPublicKey!!, amount)
 
         val replyMessage = waitForMessage(CommunityMessageType.BlindSignatureReplyMessage) as BlindSignatureReplyMessage
         return replyMessage.signature
@@ -208,7 +208,7 @@ class IPV8CommunicationProtocol(
         val publicKey = bank.group.gElementFromBytes(message.publicKeyBytes)
         val challenge = message.challenge
         val amount = message.amount
-        val signature = bank.createBlindSignature(challenge, publicKey,amount)
+        val signature = bank.createBlindSignature(challenge, publicKey, amount)
         val requestingPeer = message.peer
         community.sendBlindSignature(signature, requestingPeer)
     }

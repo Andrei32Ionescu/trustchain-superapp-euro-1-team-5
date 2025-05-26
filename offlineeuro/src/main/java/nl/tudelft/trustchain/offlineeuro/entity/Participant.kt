@@ -6,6 +6,7 @@ import nl.tudelft.trustchain.offlineeuro.cryptography.BilinearGroup
 import nl.tudelft.trustchain.offlineeuro.cryptography.CRS
 import nl.tudelft.trustchain.offlineeuro.cryptography.GrothSahai
 import nl.tudelft.trustchain.offlineeuro.cryptography.RandomizationElements
+import java.util.concurrent.ConcurrentHashMap
 
 abstract class Participant(
     val communicationProtocol: ICommunicationProtocol,
@@ -15,7 +16,7 @@ abstract class Participant(
     protected lateinit var privateKey: Element
     lateinit var publicKey: Element
     lateinit var group: BilinearGroup
-    val randomizationElementMap: HashMap<Element, Element> = hashMapOf()
+    val randomizationElementMap: MutableMap<Element, Element> = ConcurrentHashMap()
     lateinit var crs: CRS
 
     fun setUp() {
@@ -57,13 +58,7 @@ abstract class Participant(
     }
 
     fun removeRandomness(publicKey: Element) {
-        for (element in randomizationElementMap.entries) {
-            val key = element.key
-
-            if (key == publicKey) {
-                randomizationElementMap.remove(key)
-            }
-        }
+        randomizationElementMap.remove(publicKey)
     }
 
     abstract fun onReceivedTransaction(

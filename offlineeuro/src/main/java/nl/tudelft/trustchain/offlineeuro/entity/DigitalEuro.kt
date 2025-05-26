@@ -19,6 +19,7 @@ import kotlin.String
 
 data class DigitalEuroBytes(
     val serialNumberBytes: ByteArray,
+    val originalAmountBytes: ByteArray,
     val amountBytes: ByteArray,
     val firstTheta1Bytes: ByteArray,
     val signatureBytes: ByteArray,
@@ -27,6 +28,7 @@ data class DigitalEuroBytes(
     fun toDigitalEuro(group: BilinearGroup): DigitalEuro {
         return DigitalEuro(
             serialNumberBytes.toString(Charsets.UTF_8),
+            originalAmountBytes.toString(Charsets.UTF_8).toLong(),
             amountBytes.toString(Charsets.UTF_8).toLong(),
             group.gElementFromBytes(firstTheta1Bytes),
             SchnorrSignatureSerializer.deserializeSchnorrSignatureBytes(signatureBytes)!!,
@@ -37,6 +39,7 @@ data class DigitalEuroBytes(
 
 data class DigitalEuro(
     val serialNumber: String,
+    val originalAmount: Long,
     val amount: Long,
     val firstTheta1: Element,
     val signature: SchnorrSignature,
@@ -88,6 +91,7 @@ data class DigitalEuro(
         val proofBytes = GrothSahaiSerializer.serializeGrothSahaiProofs(proofs)
         return DigitalEuroBytes(
             serialNumber.toByteArray(),
+            originalAmount.toString().toByteArray(),
             amount.toString().toByteArray(),
             firstTheta1.toBytes(),
             SchnorrSignatureSerializer.serializeSchnorrSignature(signature)!!,

@@ -208,7 +208,8 @@ object TableHelpers {
             try {
                 val depositResult = user.sendDigitalEuroTo(bankName)
 
-                Toast.makeText(context, depositResult, Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, depositResult[0], Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, depositResult[1], Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
                 Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
             }

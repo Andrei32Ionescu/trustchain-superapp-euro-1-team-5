@@ -1,6 +1,7 @@
 createDepositedEurosTable:
 CREATE TABLE IF NOT EXISTS DepositedEuros (
         serialNumber TEXT NOT NULL,
+        originalAmount INTEGER NOT NULL,  -- Add amount field
         amount INTEGER NOT NULL,  -- Add amount field
         firstTheta1 BLOB NOT NULL,
         signature BLOB NOT NULL,
@@ -10,11 +11,13 @@ CREATE TABLE IF NOT EXISTS DepositedEuros (
 insertDepositedEuro:
 INSERT INTO DepositedEuros(
     serialNumber,
+    originalAmount,     -- Add original amount field
     amount,     -- Add amount field
     firstTheta1,
     signature,
     proofs)
 VALUES (?,
+    ?,          -- Add original amount parameter
     ?,          -- Add amount parameter
     ?,
     ?,
@@ -24,7 +27,7 @@ VALUES (?,
 getDepositedEuroByDescriptor:
 SELECT *
 FROM DepositedEuros
-WHERE serialNumber LIKE ? AND amount = ? AND firstTheta1 = ? AND signature = ?;  -- Add amount to query
+WHERE serialNumber LIKE ? AND originalAmount = ? AND firstTheta1 = ? AND signature = ?;  -- Add amount to query
 
 getDepositedEuros:
 SELECT *

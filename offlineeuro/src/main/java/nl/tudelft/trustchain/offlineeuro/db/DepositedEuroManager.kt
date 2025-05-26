@@ -16,6 +16,7 @@ class DepositedEuroManager(
     private val queries: DepositedEurosQueries = database.depositedEurosQueries
     private val digitalEuroMapper = {
             serialNumber: String,
+            originalAmount: Long,
             amount: Long,
             firstTheta: ByteArray,
             signature: ByteArray,
@@ -23,6 +24,7 @@ class DepositedEuroManager(
         ->
         DigitalEuro(
             serialNumber,
+            originalAmount,
             amount,
             group.gElementFromBytes(firstTheta),
             deserializeSchnorr(signature)!!,
@@ -39,6 +41,7 @@ class DepositedEuroManager(
         val (serialNumber, amount,firstTheta1, signature, proofs) = digitalEuro
         queries.insertDepositedEuro(
             serialNumber,
+            originalAmount,
             amount,
             firstTheta1.toBytes(),
             serialize(signature)!!,
@@ -50,7 +53,7 @@ class DepositedEuroManager(
         val (serialNumber,amount, firstTheta1, signature, _) = digitalEuro
         return queries.getDepositedEuroByDescriptor(
             serialNumber,
-            amount,
+            originalAmount,     // Use original amount since it is signed
             firstTheta1.toBytes(),
             serialize(signature)!!,
             digitalEuroMapper
