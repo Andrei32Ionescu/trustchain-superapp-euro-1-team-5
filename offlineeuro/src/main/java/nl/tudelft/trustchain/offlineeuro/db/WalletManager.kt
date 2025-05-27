@@ -1,6 +1,7 @@
 package nl.tudelft.trustchain.offlineeuro.db
 
 import android.content.Context
+import android.util.Log
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import nl.tudelft.offlineeuro.sqldelight.Database
@@ -107,6 +108,7 @@ class WalletManager(
             digitalEuro.serialNumber,
             digitalEuro.firstTheta1.toBytes(),
             serialize(digitalEuro.signature)!!,
+            digitalEuro.amount,
             walletEntryMapper
         ).executeAsOneOrNull()
     }
