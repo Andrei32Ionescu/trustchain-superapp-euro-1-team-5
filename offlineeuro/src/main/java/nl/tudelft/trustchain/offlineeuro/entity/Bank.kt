@@ -6,6 +6,7 @@ import nl.tudelft.trustchain.offlineeuro.communication.ICommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.cryptography.BilinearGroup
 import nl.tudelft.trustchain.offlineeuro.cryptography.Schnorr
 import nl.tudelft.trustchain.offlineeuro.db.DepositedEuroManager
+import nl.tudelft.trustchain.offlineeuro.enums.Role
 import java.math.BigInteger
 import kotlin.math.min
 
@@ -16,8 +17,8 @@ class Bank(
     context: Context?,
     private val depositedEuroManager: DepositedEuroManager = DepositedEuroManager(context, group),
     runSetup: Boolean = true,
-    onDataChangeCallback: ((String?) -> Unit)? = null
-) : Participant(communicationProtocol, name, onDataChangeCallback) {
+    onDataChangeCallback: ((String?) -> Unit)? = null,
+) : Participant(communicationProtocol, name, onDataChangeCallback, Role.Bank) {
     private val depositedEuros: ArrayList<DigitalEuro> = arrayListOf()
     val withdrawUserRandomness: HashMap<Element, Element> = hashMapOf()
     val depositedEuroLogger: ArrayList<Pair<String, Boolean>> = arrayListOf()

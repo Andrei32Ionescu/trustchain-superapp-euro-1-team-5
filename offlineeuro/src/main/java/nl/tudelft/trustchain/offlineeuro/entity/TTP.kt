@@ -7,6 +7,7 @@ import nl.tudelft.trustchain.offlineeuro.cryptography.BilinearGroup
 import nl.tudelft.trustchain.offlineeuro.cryptography.CRSGenerator
 import nl.tudelft.trustchain.offlineeuro.cryptography.GrothSahaiProof
 import nl.tudelft.trustchain.offlineeuro.db.RegisteredUserManager
+import nl.tudelft.trustchain.offlineeuro.enums.Role
 
 class TTP(
     name: String = "TTP",
@@ -15,13 +16,17 @@ class TTP(
     context: Context?,
     private val registeredUserManager: RegisteredUserManager = RegisteredUserManager(context, group),
     onDataChangeCallback: ((String?) -> Unit)? = null
-) : Participant(communicationProtocol, name, onDataChangeCallback) {
+) : Participant(communicationProtocol, name, onDataChangeCallback, Role.TTP) {
     val crsMap: Map<Element, Element>
 
     init {
         communicationProtocol.participant = this
         this.group = group
-        val generatedCRS = CRSGenerator.generateCRSMap(group)
+        val testList = ArrayList<String>();
+        testList.add("test");
+        testList.add("test2");
+        testList.add("test3");
+        val generatedCRS = CRSGenerator.generateCRSMap(group, testList)
         this.crs = generatedCRS.first
         this.crsMap = generatedCRS.second
         generateKeyPair()
@@ -29,10 +34,15 @@ class TTP(
 
     fun registerUser(
         name: String,
-        publicKey: Element
+        publicKey: Element,
+        role: Role
     ): Boolean {
         val result = registeredUserManager.addRegisteredUser(name, publicKey)
         onDataChangeCallback?.invoke("Registered $name")
+        if(role == Role.Bank){
+            print("Bank registered")
+            crs.setBankPKs(crs.getBankPKs() + publicKey.toString())
+        }
         return result
     }
 

@@ -26,7 +26,6 @@ class WalletManager(
             transactionSignature: ByteArray?,
             timesSpent: Long,
             receivedTimestamp: Long,
-            transferCount: Long
         ->
         WalletEntry(
             DigitalEuro(
@@ -40,7 +39,6 @@ class WalletManager(
             deserializeSchnorr(transactionSignature),
             timesSpent,
             receivedTimestamp,
-            transferCount.toInt()
         )
     }
 
@@ -115,12 +113,4 @@ class WalletManager(
         queries.clearWalletTable()
     }
 
-    fun incrementTransferCount(digitalEuro: DigitalEuro) {
-        queries.incrementTransferCount(
-            digitalEuro.serialNumber,
-            digitalEuro.firstTheta1.toBytes(),
-            serialize(digitalEuro.signature)!!,
-            serialize(digitalEuro.proofs)
-        )
-    }
 }

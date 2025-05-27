@@ -7,6 +7,7 @@ import nl.tudelft.trustchain.offlineeuro.communication.ICommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.cryptography.BilinearGroup
 import nl.tudelft.trustchain.offlineeuro.cryptography.Schnorr
 import nl.tudelft.trustchain.offlineeuro.db.WalletManager
+import nl.tudelft.trustchain.offlineeuro.enums.Role
 import java.util.UUID
 
 class User(
@@ -17,7 +18,7 @@ class User(
     communicationProtocol: ICommunicationProtocol,
     runSetup: Boolean = true,
     onDataChangeCallback: ((String?) -> Unit)? = null
-) : Participant(communicationProtocol, name, onDataChangeCallback) {
+) : Participant(communicationProtocol, name, onDataChangeCallback, Role.User) {
     val wallet: Wallet
 
     init {

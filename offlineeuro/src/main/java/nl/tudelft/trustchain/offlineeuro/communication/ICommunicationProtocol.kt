@@ -6,6 +6,7 @@ import nl.tudelft.trustchain.offlineeuro.cryptography.GrothSahaiProof
 import nl.tudelft.trustchain.offlineeuro.cryptography.RandomizationElements
 import nl.tudelft.trustchain.offlineeuro.entity.Participant
 import nl.tudelft.trustchain.offlineeuro.entity.TransactionDetails
+import nl.tudelft.trustchain.offlineeuro.enums.Role
 import java.math.BigInteger
 
 interface ICommunicationProtocol {
@@ -16,7 +17,8 @@ interface ICommunicationProtocol {
     fun register(
         userName: String,
         publicKey: Element,
-        nameTTP: String
+        nameTTP: String,
+        role: Role
     )
 
     fun getBlindSignatureRandomness(

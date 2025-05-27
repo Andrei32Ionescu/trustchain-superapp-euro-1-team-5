@@ -6,11 +6,13 @@ import nl.tudelft.trustchain.offlineeuro.cryptography.BilinearGroup
 import nl.tudelft.trustchain.offlineeuro.cryptography.CRS
 import nl.tudelft.trustchain.offlineeuro.cryptography.GrothSahai
 import nl.tudelft.trustchain.offlineeuro.cryptography.RandomizationElements
+import nl.tudelft.trustchain.offlineeuro.enums.Role
 
 abstract class Participant(
     val communicationProtocol: ICommunicationProtocol,
     val name: String,
-    val onDataChangeCallback: ((String?) -> Unit)? = null
+    val onDataChangeCallback: ((String?) -> Unit)? = null,
+    val role: Role
 ) {
     protected lateinit var privateKey: Element
     lateinit var publicKey: Element
@@ -35,7 +37,7 @@ abstract class Participant(
 
     fun registerAtTTP() {
         // TODO NAME OF TTP
-        communicationProtocol.register(name, publicKey, "TTP")
+        communicationProtocol.register(name, publicKey, "TTP", role)
     }
 
     fun generateRandomizationElements(receiverPublicKey: Element): RandomizationElements {

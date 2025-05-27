@@ -13,7 +13,6 @@ data class WalletEntry(
     val transactionSignature: SchnorrSignature?,
     val timesSpent: Long = 0,
     val receivedTimestamp: Long = System.currentTimeMillis(),
-    val transferCount: Int = 0
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -24,21 +23,23 @@ data class WalletEntry(
             this.t == other.t &&
             this.transactionSignature == other.transactionSignature &&
             this.timesSpent == other.timesSpent &&
-            this.receivedTimestamp == other.receivedTimestamp &&
-            this.transferCount == other.transferCount
+            this.receivedTimestamp == other.receivedTimestamp
     }
 
     fun calculateTransactionFee(): Double {
         val currentTime = System.currentTimeMillis()
         val timeInWallet = (currentTime - receivedTimestamp) / (1000 * 60 * 60)
+        val currentTransferCount = calculateTransferCount()
 
         var fee = 0.01
 
         fee += (timeInWallet / 24) * 0.005
 
-        fee += transferCount * 0.01
+        if (currentTransferCount > 3) {
+            fee += (currentTransferCount - 3) * 0.05
+        }
 
-        return minOf(fee, 0.50)
+        return fee
     }
 
     fun getValueAfterFee(): Long {
@@ -46,6 +47,10 @@ data class WalletEntry(
         val left = (digitalEuro.amount.toFloat() * (1.00-fee)).toLong()
 
         return left
+    }
+
+    fun calculateTransferCount(): Int {
+        return this.digitalEuro.proofs.size
     }
 }
 
@@ -97,7 +102,6 @@ class Wallet(
         if (walletEntry.timesSpent > 0) return null
 
         walletManager.incrementTimesSpent(digitalEuro)
-        walletManager.incrementTransferCount(digitalEuro)
 
         if (deposit == true) {
             return Transaction.createTransaction(privateKey, publicKey, walletEntry, randomizationElements, bilinearGroup, crs)
@@ -140,7 +144,6 @@ class Wallet(
         val walletEntry = walletManager.getNumberOfWalletEntriesToSpend(1).firstOrNull() ?: return null
         val euro = walletEntry.digitalEuro
         walletManager.incrementTimesSpent(euro)
-        walletManager.incrementTransferCount(euro)
 
         if (deposit == true) {
             return Transaction.createTransaction(privateKey, publicKey, walletEntry, randomizationElements, bilinearGroup, crs)

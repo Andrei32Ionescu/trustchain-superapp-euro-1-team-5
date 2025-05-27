@@ -12,6 +12,7 @@ data class CRS(
     val v: Element,
     val hPrime: Element,
     val vPrime: Element,
+    var bankPKs: List<String> = emptyList(),
 ) {
     fun toCRSBytes(): CRSBytes {
         return CRSBytes(
@@ -22,7 +23,8 @@ data class CRS(
             h.toBytes(),
             v.toBytes(),
             hPrime.toBytes(),
-            vPrime.toBytes()
+            vPrime.toBytes(),
+            bankPKs.map { str -> str.toByteArray() }
         )
     }
 
@@ -41,6 +43,14 @@ data class CRS(
                 this.vPrime == other.vPrime
         )
     }
+
+    fun setBankPKs(bankPKs: List<String>) {
+        this.bankPKs = bankPKs
+    }
+
+    fun getBankPKs(): List<String> {
+        return bankPKs
+    }
 }
 
 data class CRSBytes(
@@ -53,6 +63,7 @@ data class CRSBytes(
     val v: ByteArray,
     val hPrime: ByteArray,
     val vPrime: ByteArray,
+    val bankPKs: List<ByteArray>,
 ) {
     fun toCRS(group: BilinearGroup): CRS {
         return CRS(
@@ -64,6 +75,7 @@ data class CRSBytes(
             group.hElementFromBytes(v),
             group.hElementFromBytes(hPrime),
             group.hElementFromBytes(vPrime),
+            bankPKs.map { byteArray -> String(byteArray) }
         )
     }
 
@@ -85,7 +97,7 @@ data class CRSBytes(
 }
 
 object CRSGenerator {
-    fun generateCRSMap(bilinearGroup: BilinearGroup): Pair<CRS, Map<Element, Element>> {
+    fun generateCRSMap(bilinearGroup: BilinearGroup, bankPKs: List<String>): Pair<CRS, Map<Element, Element>> {
         val group1 = bilinearGroup.g
         val group2 = bilinearGroup.h
 
@@ -114,7 +126,7 @@ object CRSGenerator {
         val vPrimeGenerator = bilinearGroup.pairing.zr.newRandomElement().immutable
         val vPrime = group2.duplicate().powZn(vPrimeGenerator).immutable
 
-        val crs = CRS(g, u, gPrime, uPrime, h, v, hPrime, vPrime)
+        val crs = CRS(g, u, gPrime, uPrime, h, v, hPrime, vPrime, bankPKs)
 
         val crsMap =
             mapOf(
