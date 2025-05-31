@@ -24,7 +24,7 @@ VALUES (?,
 getDepositedEuroByDescriptor:
 SELECT *
 FROM DepositedEuros
-WHERE serialNumber LIKE ? AND amount = ? AND firstTheta1 = ? AND signature = ?;  -- Add amount to query
+WHERE serialNumber LIKE ? AND firstTheta1 = ? AND signature = ?;
 
 getDepositedEuros:
 SELECT *

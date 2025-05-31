@@ -233,8 +233,18 @@ object TableHelpers {
                 }
             }
 
-            depositButton.text = "-"
-            depositButton.isEnabled = false
+            depositButton.text = "DS to Bank"
+            depositButton.setOnClickListener {
+                showBankSelectionDialog(context, user) { selectedBank ->
+                    try {
+                        val result = user.doubleSpendSpecificDigitalEuroTo(digitalEuro, selectedBank)
+                        Toast.makeText(context, "Doubly spent deposit: $result", Toast.LENGTH_SHORT).show()
+                    } catch (e: Exception) {
+                        Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            depositButton.isEnabled = true
         } else {
             // Already double spent - no actions available
             sendButton.text = "-"

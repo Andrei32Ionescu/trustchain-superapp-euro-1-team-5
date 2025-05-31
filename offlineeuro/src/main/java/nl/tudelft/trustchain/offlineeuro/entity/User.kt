@@ -45,7 +45,6 @@ class User(
         }
         val transactionDetails = wallet.spendSpecificEuro(digitalEuro, randomizationElements, group, crs, deposit)
             ?: throw Exception("Cannot spend this specific euro")
-
         val result = communicationProtocol.sendTransactionDetails(nameReceiver, transactionDetails)
         onDataChangeCallback?.invoke(result)
         return result
@@ -53,9 +52,12 @@ class User(
     // Double spend a specific digital euro to a receiver
     fun doubleSpendSpecificDigitalEuroTo(digitalEuro: DigitalEuro, nameReceiver: String): String {
         val randomizationElements = communicationProtocol.requestTransactionRandomness(nameReceiver, group)
-        val transactionDetails = wallet.doubleSpendSpecificEuro(digitalEuro, randomizationElements, group, crs)
+        var deposit = false
+        if (nameReceiver.lowercase().contains("bank")) {
+            deposit = true
+        }
+        val transactionDetails = wallet.doubleSpendSpecificEuro(digitalEuro, randomizationElements, group, crs, deposit)
             ?: throw Exception("Cannot double spend this specific euro")
-
         val result = communicationProtocol.sendTransactionDetails(nameReceiver, transactionDetails)
         onDataChangeCallback?.invoke(result)
         return result
@@ -78,7 +80,11 @@ class User(
 
     fun doubleSpendDigitalEuroTo(nameReceiver: String): String {
         val randomizationElements = communicationProtocol.requestTransactionRandomness(nameReceiver, group)
-        val transactionDetails = wallet.doubleSpendEuro(randomizationElements, group, crs)
+        var deposit = false
+        if (nameReceiver.lowercase().contains("bank")) {
+            deposit = true
+        }
+        val transactionDetails = wallet.doubleSpendEuro(randomizationElements, group, crs, deposit)
         val result = communicationProtocol.sendTransactionDetails(nameReceiver, transactionDetails!!)
         onDataChangeCallback?.invoke(result)
         return result

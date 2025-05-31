@@ -103,6 +103,10 @@ class WalletManager(
         )
     }
 
+    // A user stores every token they ever receive, which is used to implement double spending functionality to see if the bank can detect it.
+    // It is possibly also utilized on the user's device for them to detect double spending at deposit time.
+    // If it occurs that a user receives the same token they sent out previously, and its value is unchanged given a different fee function,
+    // Then we must query the token with the last received timestamp, as otherwise the DB would return multiple tokens.
     fun getWalletEntryByDigitalEuro(digitalEuro: DigitalEuro): WalletEntry? {
         return queries.getWalletEntryByDescriptor(
             digitalEuro.serialNumber,
@@ -110,7 +114,7 @@ class WalletManager(
             serialize(digitalEuro.signature)!!,
             digitalEuro.amount,
             walletEntryMapper
-        ).executeAsOneOrNull()
+        ).executeAsList().sortedByDescending { entry -> entry.receivedTimestamp }.firstOrNull()
     }
 
     fun clearWalletEntries() {

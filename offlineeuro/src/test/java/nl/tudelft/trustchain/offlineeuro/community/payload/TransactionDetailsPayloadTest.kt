@@ -85,6 +85,7 @@ class TransactionDetailsPayloadTest {
 
         return DigitalEuro(
             "Test Serialnumber",
+            200L,
             group.generateRandomElementOfG(),
             generateSignature(),
             proofs
