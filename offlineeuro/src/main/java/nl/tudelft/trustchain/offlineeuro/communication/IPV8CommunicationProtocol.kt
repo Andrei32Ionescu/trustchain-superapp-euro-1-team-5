@@ -34,6 +34,10 @@ import nl.tudelft.trustchain.offlineeuro.enums.Role
 import nl.tudelft.trustchain.offlineeuro.libraries.GrothSahaiSerializer
 import java.math.BigInteger
 import android.util.Log
+import nl.tudelft.trustchain.offlineeuro.community.message.BankRegistrationReplyMessage
+import nl.tudelft.trustchain.offlineeuro.cryptography.SchnorrSignature
+import nl.tudelft.trustchain.offlineeuro.libraries.SchnorrSignatureSerializer
+import org.bitcoinj.core.Peer
 
 class IPV8CommunicationProtocol(
     val addressBookManager: AddressBookManager,
@@ -48,6 +52,7 @@ class IPV8CommunicationProtocol(
     private val sleepDuration: Long = 100
     private val timeOutInMS = 10000
     override lateinit var participant: Participant
+    private var bankRegistrationRequestingPeer: Peer? = null
 
     override fun getGroupDescriptionAndCRS() {
         community.getGroupDescriptionAndCRS()
@@ -65,9 +70,16 @@ class IPV8CommunicationProtocol(
         publicKey: Element,
         nameTTP: String,
         role: Role
-    ) {
+    ): SchnorrSignature? {
         val ttpAddress = addressBookManager.getAddressByName(nameTTP)
         community.registerAtTTP(userName, publicKey.toBytes(), ttpAddress.peerPublicKey!!, role)
+
+        if (role == Role.Bank) {
+            // Wait for registration response with signature
+            val message = waitForMessage(CommunityMessageType.BankRegistrationReplyMessage) as BankRegistrationReplyMessage
+            return SchnorrSignatureSerializer.deserializeSchnorrSignatureBytes(message.signatureBytes)
+        }
+        return null
     }
 
     override fun getBlindSignatureRandomness(
@@ -88,12 +100,12 @@ class IPV8CommunicationProtocol(
         bankName: String,
         challenge: BigInteger,
         amount: Long
-    ): BigInteger {
+    ): ICommunicationProtocol.BlindSignatureResponse {
         val bankAddress = addressBookManager.getAddressByName(bankName)
-        community.getBlindSignature(challenge, publicKey.toBytes(),bankAddress.peerPublicKey!!,amount)
+        community.getBlindSignature(challenge, publicKey.toBytes(), bankAddress.peerPublicKey!!, amount)
 
         val replyMessage = waitForMessage(CommunityMessageType.BlindSignatureReplyMessage) as BlindSignatureReplyMessage
-        return replyMessage.signature
+        return replyMessage
     }
 
     override fun requestTransactionRandomness(
@@ -248,7 +260,13 @@ class IPV8CommunicationProtocol(
 
         val ttp = participant as TTP
         val publicKey = ttp.group.gElementFromBytes(message.userPKBytes)
-        ttp.registerUser(message.userName, publicKey, message.role)
+        val (success, signature) = ttp.registerUser(message.userName, publicKey, message.role)
+
+        // If it's a bank registration, send back the signature
+        if (message.role == Role.Bank && signature != null && success) {
+            val signatureBytes = SchnorrSignatureSerializer.serializeSchnorrSignature(signature)
+            community.sendBankRegistrationReply(signatureBytes, message.requestingPeer)
+        }
     }
 
     private fun handleAddressRequestMessage(message: AddressRequestMessage) {

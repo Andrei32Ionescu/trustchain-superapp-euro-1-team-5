@@ -35,7 +35,7 @@ abstract class Participant(
         publicKey = group.g.powZn(privateKey)
     }
 
-    fun registerAtTTP() {
+    open fun registerAtTTP() {
         // TODO NAME OF TTP
         communicationProtocol.register(name, publicKey, "TTP", role)
     }

@@ -39,6 +39,8 @@ import nl.tudelft.trustchain.offlineeuro.entity.TransactionDetailsBytes
 import nl.tudelft.trustchain.offlineeuro.enums.Role
 import java.math.BigInteger
 import android.util.Log
+import nl.tudelft.trustchain.offlineeuro.community.message.BankRegistrationReplyMessage
+import nl.tudelft.trustchain.offlineeuro.cryptography.SchnorrSignature
 
 object MessageID {
     const val GET_GROUP_DESCRIPTION_CRS = 9
@@ -49,6 +51,7 @@ object MessageID {
     const val GET_BLIND_SIGNATURE_RANDOMNESS_REPLY = 13
     const val GET_BLIND_SIGNATURE = 14
     const val GET_BLIND_SIGNATURE_REPLY = 15
+    const val BANK_REGISTRATION_REPLY = 24
 
     const val GET_TRANSACTION_RANDOMIZATION_ELEMENTS = 16
     const val GET_TRANSACTION_RANDOMIZATION_ELEMENTS_REPLY = 17
@@ -83,6 +86,7 @@ class OfflineEuroCommunity(
 
         messageHandlers[MessageID.GET_BLIND_SIGNATURE] = ::onGetBlindSignaturePacket
         messageHandlers[MessageID.GET_BLIND_SIGNATURE_REPLY] = ::onGetBlindSignatureReplyPacket
+        messageHandlers[MessageID.BANK_REGISTRATION_REPLY] = ::onBankRegistrationReplyPacket
 
         messageHandlers[MessageID.GET_TRANSACTION_RANDOMIZATION_ELEMENTS] = ::onGetTransactionRandomizationElementsRequestPacket
         messageHandlers[MessageID.GET_TRANSACTION_RANDOMIZATION_ELEMENTS_REPLY] = ::onGetTransactionRandomizationElementsReplyPacket
@@ -484,6 +488,27 @@ class OfflineEuroCommunity(
             )
 
         send(peer, packet)
+    }
+
+    fun sendBankRegistrationReply(
+        signatureBytes: ByteArray,
+        requestingPeer: Peer
+    ) {
+        val packet = serializePacket(
+            MessageID.BANK_REGISTRATION_REPLY,
+            ByteArrayPayload(signatureBytes)
+        )
+        send(requestingPeer, packet)
+    }
+
+    private fun onBankRegistrationReplyPacket(packet: Packet) {
+        val (_, payload) = packet.getAuthPayload(ByteArrayPayload)
+        onBankRegistrationReply(payload)
+    }
+
+    private fun onBankRegistrationReply(payload: ByteArrayPayload) {
+        val message = BankRegistrationReplyMessage(payload.bytes)
+        addMessage(message)
     }
 
     fun onFraudControlRequestPacket(packet: Packet) {

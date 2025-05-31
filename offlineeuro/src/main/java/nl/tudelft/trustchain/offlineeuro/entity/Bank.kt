@@ -5,6 +5,7 @@ import it.unisa.dia.gas.jpbc.Element
 import nl.tudelft.trustchain.offlineeuro.communication.ICommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.cryptography.BilinearGroup
 import nl.tudelft.trustchain.offlineeuro.cryptography.Schnorr
+import nl.tudelft.trustchain.offlineeuro.cryptography.SchnorrSignature
 import nl.tudelft.trustchain.offlineeuro.db.DepositedEuroManager
 import nl.tudelft.trustchain.offlineeuro.enums.Role
 import java.math.BigInteger
@@ -22,6 +23,7 @@ class Bank(
     private val depositedEuros: ArrayList<DigitalEuro> = arrayListOf()
     val withdrawUserRandomness: HashMap<Element, Element> = hashMapOf()
     val depositedEuroLogger: ArrayList<Pair<String, Boolean>> = arrayListOf()
+    var ttpSignatureOnPublicKey: SchnorrSignature? = null
 
     init {
         communicationProtocol.participant = this
@@ -30,6 +32,14 @@ class Bank(
             setUp()
         } else {
             generateKeyPair()
+        }
+    }
+
+    override fun registerAtTTP() {
+        val signature = communicationProtocol.register(name, publicKey, "TTP", role)
+        if (signature != null) {
+            ttpSignatureOnPublicKey = signature
+            onDataChangeCallback?.invoke("Registered at TTP with signed public key")
         }
     }
 
@@ -47,14 +57,32 @@ class Bank(
         challenge: BigInteger,
         userPublicKey: Element,
         amount: Long
-    ): BigInteger {
-        val k =
-            lookUp(userPublicKey)
-                ?: return BigInteger.ZERO
+    ): Triple<BigInteger, Long, SchnorrSignature> {  // Return signature and metadata
+        val k = lookUp(userPublicKey) ?: return Triple(BigInteger.ZERO, 0L, SchnorrSignature(BigInteger.ZERO, BigInteger.ZERO, ByteArray(0)))
         remove(userPublicKey)
 
+        // Create timestamp
+        val timestamp = System.currentTimeMillis()
+
+        // Sign the timestamp with bank's private key
+        val timestampSignature = Schnorr.schnorrSignature(
+            privateKey,
+            timestamp.toString().toByteArray(),
+            group
+        )
+
+        val blindSignature = Schnorr.signBlindedChallenge(k, challenge, privateKey)
+
         onDataChangeCallback?.invoke("A token of €${amount.toFloat()/100.0} was withdrawn by $userPublicKey")
-        return Schnorr.signBlindedChallenge(k, challenge, privateKey)
+
+        return Triple(blindSignature, timestamp, timestampSignature)
+    }
+
+    fun getWithdrawalMetadata(): Pair<Element, SchnorrSignature> {
+        if (ttpSignatureOnPublicKey == null) {
+            throw Exception("Bank not registered with TTP")
+        }
+        return Pair(publicKey, ttpSignatureOnPublicKey!!)
     }
 
     private fun lookUp(userPublicKey: Element): Element? {

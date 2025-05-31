@@ -6,6 +6,8 @@ import nl.tudelft.trustchain.offlineeuro.communication.ICommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.cryptography.BilinearGroup
 import nl.tudelft.trustchain.offlineeuro.cryptography.CRSGenerator
 import nl.tudelft.trustchain.offlineeuro.cryptography.GrothSahaiProof
+import nl.tudelft.trustchain.offlineeuro.cryptography.Schnorr
+import nl.tudelft.trustchain.offlineeuro.cryptography.SchnorrSignature
 import nl.tudelft.trustchain.offlineeuro.db.RegisteredUserManager
 import nl.tudelft.trustchain.offlineeuro.enums.Role
 
@@ -15,35 +17,39 @@ class TTP(
     communicationProtocol: ICommunicationProtocol,
     context: Context?,
     private val registeredUserManager: RegisteredUserManager = RegisteredUserManager(context, group),
-    onDataChangeCallback: ((String?) -> Unit)? = null
+    onDataChangeCallback: ((String?) -> Unit)? = null,
+    private val signedBankKeys: HashMap<Element, SchnorrSignature> = HashMap<Element, SchnorrSignature>()
 ) : Participant(communicationProtocol, name, onDataChangeCallback, Role.TTP) {
     val crsMap: Map<Element, Element>
 
     init {
         communicationProtocol.participant = this
         this.group = group
-        val testList = ArrayList<String>();
-        testList.add("test");
-        testList.add("test2");
-        testList.add("test3");
-        val generatedCRS = CRSGenerator.generateCRSMap(group, testList)
+        generateKeyPair()
+        val generatedCRS = CRSGenerator.generateCRSMap(group, publicKey)  // Pass TTP's public key
         this.crs = generatedCRS.first
         this.crsMap = generatedCRS.second
-        generateKeyPair()
     }
 
     fun registerUser(
         name: String,
         publicKey: Element,
         role: Role
-    ): Boolean {
+    ): Pair<Boolean, SchnorrSignature?> {
         val result = registeredUserManager.addRegisteredUser(name, publicKey)
         onDataChangeCallback?.invoke("Registered $name")
-        if(role == Role.Bank){
-            print("Bank registered")
-            crs.setBankPKs(crs.getBankPKs() + publicKey.toString())
+
+        var bankKeySignature: SchnorrSignature? = null
+        if (role == Role.Bank) {
+            // Sign the bank's public key
+            bankKeySignature = Schnorr.schnorrSignature(
+                privateKey,
+                publicKey.toBytes(),
+                group
+            )
+            signedBankKeys[publicKey] = bankKeySignature
         }
-        return result
+        return Pair(result, bankKeySignature)
     }
 
     fun getRegisteredUsers(): List<RegisteredUser> {

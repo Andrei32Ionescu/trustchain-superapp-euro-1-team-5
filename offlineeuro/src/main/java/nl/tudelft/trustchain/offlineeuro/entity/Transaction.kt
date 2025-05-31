@@ -24,6 +24,7 @@ enum class TransactionResult(val valid: Boolean, val description: String) {
     INVALID_PROOF_IN_CHAIN(false, "Invalid proof in chain"),
     INVALID_CHAIN_OF_PROOFS(false, "Invalid chaining of proofs"),
     INVALID_PREVIOUS_TRANSACTION_SIGNATURE(false, "Invalid previous transaction signature"),
+    INVALID_TIMESTAMP_CHAIN(false, "Invalid timestamp verification chain"),
 }
 
 data class TransactionDetailsBytes(
@@ -124,6 +125,10 @@ object Transaction {
             return TransactionResult.INVALID_CURRENT_TRANSACTION_PROOF
         }
 
+        if (!validateTimestampChain(digitalEuro, crs, bilinearGroup)) {
+            return TransactionResult.INVALID_TIMESTAMP_CHAIN
+        }   
+
         // Validate that d2 is constructed correctly
         val usedY = transactionProof.usedY
         val usedVS = transactionProof.usedVS
@@ -142,6 +147,49 @@ object Transaction {
         }
 
         return validateProofChain(transaction, bilinearGroup, crs)
+    }
+
+    fun validateTimestampChain(
+        digitalEuro: DigitalEuro,
+        crs: CRS,
+        bilinearGroup: BilinearGroup
+    ): Boolean {
+        // Check all required fields are present
+        if (digitalEuro.withdrawalTimestamp == null || 
+            digitalEuro.timestampSignature == null ||
+            digitalEuro.bankPublicKey == null || 
+            digitalEuro.bankKeySignature == null ||
+            crs.ttpPublicKey == null) {
+            return false
+        }
+        
+        // Verify TTP signed the bank's public key
+        val bankKeyVerified = Schnorr.verifySchnorrSignature(
+            digitalEuro.bankKeySignature,
+            crs.ttpPublicKey,
+            bilinearGroup
+        )
+        if (!bankKeyVerified) {
+            return false
+        }
+        
+        // Verify bank signed the timestamp
+        val timestampVerified = Schnorr.verifySchnorrSignature(
+            digitalEuro.timestampSignature,
+            digitalEuro.bankPublicKey,
+            bilinearGroup
+        )
+        if (!timestampVerified) {
+            return false
+        }
+        
+        // Verify the signed message is the actual timestamp
+        val expectedTimestampBytes = digitalEuro.withdrawalTimestamp.toString().toByteArray()
+        if (!digitalEuro.timestampSignature.signedMessage.contentEquals(expectedTimestampBytes)) {
+            return false
+        }
+        
+        return true
     }
 
     fun validateProofChain(
