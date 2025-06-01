@@ -8,7 +8,10 @@ CREATE TABLE IF NOT EXISTS Wallet (
     secretT BLOB NOT NULL,
     transactionSignature BLOB,
     timesSpent INTEGER NOT NULL,
-    receivedTimestamp INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+    timestamp INTEGER NOT NULL,
+    timestampSignature BLOB NOT NULL,
+    bankPublicKey BLOB NOT NULL,
+    bankKeySignature BLOB NOT NULL
 );
 
 insertWalletEntry:
@@ -20,9 +23,13 @@ INSERT INTO Wallet(
     previousProofs,
     secretT,
     transactionSignature,
-    timesSpent
+    timesSpent,
+    timestamp,
+    timestampSignature,
+    bankPublicKey,
+    bankKeySignature
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, 0);
+VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?);
 
 getWalletEntryByDescriptor:
 SELECT *

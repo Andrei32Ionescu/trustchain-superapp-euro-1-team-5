@@ -1,34 +1,66 @@
+-- DepositedEuros.sq
+-- =========================================================
+-- TABLE & DDL
+-- =========================================================
 createDepositedEurosTable:
 CREATE TABLE IF NOT EXISTS DepositedEuros (
-        serialNumber TEXT NOT NULL,
-        amount INTEGER NOT NULL,  -- Add amount field
-        firstTheta1 BLOB NOT NULL,
-        signature BLOB NOT NULL,
-        proofs BLOB
+    serialNumber        TEXT    NOT NULL,
+    amount              INTEGER NOT NULL,
+    firstTheta1         BLOB    NOT NULL,
+    signature           BLOB    NOT NULL,
+    proofs              BLOB,               -- optional
+    timestamp           INTEGER NOT NULL,
+    timestampSignature  BLOB    NOT NULL,
+    bankPublicKey       BLOB    NOT NULL,
+    bankKeySignature    BLOB    NOT NULL
 );
 
+-- =========================================================
+-- INSERT
+-- =========================================================
 insertDepositedEuro:
-INSERT INTO DepositedEuros(
+INSERT INTO DepositedEuros (
     serialNumber,
-    amount,     -- Add amount field
+    amount,
     firstTheta1,
     signature,
-    proofs)
-VALUES (?,
-    ?,          -- Add amount parameter
-    ?,
-    ?,
-    ?
+    proofs,
+    timestamp,
+    timestampSignature,
+    bankPublicKey,
+    bankKeySignature
+) VALUES (
+    ?,  -- serialNumber
+    ?,  -- amount
+    ?,  -- firstTheta1
+    ?,  -- signature
+    ?,  -- proofs
+    ?,  -- timestamp
+    ?,  -- timestampSignature
+    ?,  -- bankPublicKey
+    ?   -- bankKeySignature
 );
 
+-- =========================================================
+-- EXACT MATCH LOOK-UP BY “DESCRIPTOR”
+-- =========================================================
 getDepositedEuroByDescriptor:
 SELECT *
-FROM DepositedEuros
-WHERE serialNumber LIKE ? AND amount = ? AND firstTheta1 = ? AND signature = ?;  -- Add amount to query
+FROM   DepositedEuros
+WHERE  serialNumber        = ?
+  AND  amount              = ?
+  AND  firstTheta1         = ?
+  AND  signature           = ?
+  AND  timestamp           = ?
+  AND  timestampSignature  = ?
+  AND  bankPublicKey       = ?
+  AND  bankKeySignature    = ?;
 
+-- =========================================================
+-- FULL TABLE FETCH & CLEAR
+-- =========================================================
 getDepositedEuros:
-SELECT *
-FROM DepositedEuros;
+SELECT * FROM DepositedEuros;
 
 clearDepositedEurosTable:
 DELETE FROM DepositedEuros;

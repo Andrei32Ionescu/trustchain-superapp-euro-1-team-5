@@ -57,8 +57,8 @@ class Bank(
         challenge: BigInteger,
         userPublicKey: Element,
         amount: Long
-    ): Triple<BigInteger, Long, SchnorrSignature> {  // Return signature and metadata
-        val k = lookUp(userPublicKey) ?: return Triple(BigInteger.ZERO, 0L, SchnorrSignature(BigInteger.ZERO, BigInteger.ZERO, ByteArray(0)))
+    ): ICommunicationProtocol.BlindSignatureResponse {  // Return signature and metadata
+        val k = lookUp(userPublicKey) ?: return ICommunicationProtocol.BlindSignatureResponse(BigInteger.ZERO,3,SchnorrSignature(BigInteger.ZERO, BigInteger.ZERO, ByteArray(0)), userPublicKey.toBytes(), SchnorrSignature(BigInteger.ZERO, BigInteger.ZERO, ByteArray(0)))
         remove(userPublicKey)
 
         // Create timestamp
@@ -71,11 +71,13 @@ class Bank(
             group
         )
 
+        val bankPk = group.gElementFromBytes(publicKey.toBytes()) //TODO CHANGE THIS
+
         val blindSignature = Schnorr.signBlindedChallenge(k, challenge, privateKey)
 
         onDataChangeCallback?.invoke("A token of €${amount.toFloat()/100.0} was withdrawn by $userPublicKey")
 
-        return Triple(blindSignature, timestamp, timestampSignature)
+        return ICommunicationProtocol.BlindSignatureResponse(blindSignature, timestamp, timestampSignature, bankPk.toBytes(), ttpSignatureOnPublicKey!!)
     }
 
     fun getWithdrawalMetadata(): Pair<Element, SchnorrSignature> {

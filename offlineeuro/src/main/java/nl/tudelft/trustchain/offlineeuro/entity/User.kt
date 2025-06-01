@@ -102,28 +102,28 @@ class User(
         val bankPublicKey = communicationProtocol.getPublicKeyOf(bank, group)
 
         val blindedChallenge = Schnorr.createBlindedChallenge(bankRandomness, bytesToSign, bankPublicKey, group)
-        
+
         val response = communicationProtocol.requestBlindSignature(
-            publicKey, 
-            bank, 
-            blindedChallenge.blindedChallenge, 
+            publicKey,
+            bank,
+            blindedChallenge.blindedChallenge,
             amount
         )
-        
+
         val signature = Schnorr.unblindSignature(blindedChallenge, response.signature)
-        
+
         val digitalEuro = DigitalEuro(
-            serialNumber, 
-            amount, 
-            initialTheta, 
-            signature, 
+            serialNumber,
+            amount,
+            initialTheta,
+            signature,
             arrayListOf(),
             response.timestamp,
             response.timestampSignature,
-            response.bankPublicKey,
+            group.gElementFromBytes(response.bankPublicKey),
             response.bankKeySignature
         )
-        
+
         wallet.addToWallet(digitalEuro, firstT)
         onDataChangeCallback?.invoke("Withdrawn €${amount.toFloat()/100.0} successfully!")
         return digitalEuro

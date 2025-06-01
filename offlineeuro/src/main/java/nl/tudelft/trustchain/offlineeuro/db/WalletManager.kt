@@ -25,7 +25,10 @@ class WalletManager(
             secretT: ByteArray,
             transactionSignature: ByteArray?,
             timesSpent: Long,
-            receivedTimestamp: Long,
+            timestamp: Long,
+            timestampSignature: ByteArray,
+            bankPublicKey: ByteArray,
+            bankKeySignature: ByteArray,
         ->
         WalletEntry(
             DigitalEuro(
@@ -33,13 +36,17 @@ class WalletManager(
                 amount,
                 group.gElementFromBytes(firstTheta),
                 deserializeSchnorr(signature)!!,
-                deserializeGSP(previousProofs)
+                deserializeGSP(previousProofs),
+                timestamp,
+                deserializeSchnorr(timestampSignature)!!,
+                group.gElementFromBytes(bankPublicKey),
+                deserializeSchnorr(bankKeySignature)!!,
             ),
             group.zrElementFromBytes(secretT),
             deserializeSchnorr(transactionSignature),
             timesSpent,
-            receivedTimestamp,
-        )
+            timestamp
+            )
     }
 
     /**
@@ -66,7 +73,11 @@ class WalletManager(
             serialize(digitalEuro.signature)!!,
             serialize(digitalEuro.proofs),
             walletEntry.t.toBytes(),
-            serialize(walletEntry.transactionSignature)
+            serialize(walletEntry.transactionSignature),
+            digitalEuro.withdrawalTimestamp,
+            serialize(digitalEuro.timestampSignature)!!,
+            digitalEuro.bankPublicKey.toBytes(),
+            serialize(digitalEuro.bankKeySignature)!!
         )
         return true
     }

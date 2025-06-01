@@ -39,8 +39,13 @@ import nl.tudelft.trustchain.offlineeuro.entity.TransactionDetailsBytes
 import nl.tudelft.trustchain.offlineeuro.enums.Role
 import java.math.BigInteger
 import android.util.Log
+import it.unisa.dia.gas.jpbc.Element
+import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.bilinearGroup
+import nl.tudelft.trustchain.offlineeuro.communication.ICommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.community.message.BankRegistrationReplyMessage
 import nl.tudelft.trustchain.offlineeuro.cryptography.SchnorrSignature
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 object MessageID {
     const val GET_GROUP_DESCRIPTION_CRS = 9
@@ -196,7 +201,8 @@ class OfflineEuroCommunity(
                 userName,
                 userPKBytes,
                 senderPKBytes,
-                role
+                role,
+                peer
             )
 
         addMessage(message)
@@ -300,10 +306,63 @@ class OfflineEuroCommunity(
     }
 
     fun sendBlindSignature(
-        signature: BigInteger,
+        signature: ICommunicationProtocol.BlindSignatureResponse,
         peer: Peer
     ) {
-        val packet = serializePacket(MessageID.GET_BLIND_SIGNATURE_REPLY, ByteArrayPayload(signature.toByteArray()))
+//        val bigInt = signature.signature
+//        val timestamp = signature.timestamp
+//        val schnorrSigTime = signature.timestampSignature
+//        val schnorrSigPk = signature.bankKeySignature
+//        val bankpk = signature.bankPublicKey
+//
+//        val bigIntBytes = bigInt.toByteArray()
+//        val timestampBytes = ByteBuffer.allocate(Long.SIZE_BYTES).putLong(timestamp).array()
+//        val schnorrBytesTime = schnorrSigTime.toBytes()
+//        val schnorrBytesPk = schnorrSigPk.toBytes()
+//        val bankPkBytes = bankpk.toBytes()
+//
+//        val totalSize = Int.SIZE_BYTES + bigIntBytes.size + timestampBytes.size + schnorrBytesTime.size + schnorrBytesPk.size + bankPkBytes.size
+//        val buffer = ByteBuffer.allocate(totalSize)
+//            .order(ByteOrder.BIG_ENDIAN)
+//        buffer.putInt(bigIntBytes.size)
+//        buffer.put(bigIntBytes)
+//        buffer.put(timestampBytes)
+//        buffer.put(schnorrBytesTime)
+//        buffer.put(schnorrBytesPk)
+//        buffer.put(bankPkBytes)
+//
+//        val payload = ByteArrayPayload(buffer.array())
+//        val packet = serializePacket(MessageID.GET_BLIND_SIGNATURE_REPLY, payload)
+//        send(peer, packet)
+
+        val sigBytes          = signature.signature.toByteArray()
+        val tsBytes           = ByteBuffer.allocate(Long.SIZE_BYTES)
+            .putLong(signature.timestamp).array()
+        val sigTimeBytes      = signature.timestampSignature.toBytes()
+        val sigPkBytes        = signature.bankKeySignature.toBytes()
+        val bankPkBytes       = signature.bankPublicKey
+
+        val totalSize =
+            4 + sigBytes.size +                       // sig length + data
+                tsBytes.size +                            // timestamp (8 B)
+                4 + sigTimeBytes.size +                   // Schnorr time-sig
+                4 + sigPkBytes.size +                     // Schnorr pk-sig
+                4 + bankPkBytes.size                      // bank PK
+
+        val buf = ByteBuffer.allocate(totalSize)
+            .order(ByteOrder.BIG_ENDIAN)
+
+        buf.putInt(sigBytes.size) ; buf.put(sigBytes)
+        buf.put(tsBytes)
+        buf.putInt(sigTimeBytes.size) ; buf.put(sigTimeBytes)
+        buf.putInt(sigPkBytes.size)   ; buf.put(sigPkBytes)
+        buf.putInt(bankPkBytes.size)  ; buf.put(bankPkBytes)
+
+        val payload = ByteArrayPayload(buf.array())
+        val packet  = serializePacket(
+            MessageID.GET_BLIND_SIGNATURE_REPLY,
+            payload
+        )
         send(peer, packet)
     }
 
@@ -316,11 +375,39 @@ class OfflineEuroCommunity(
         requestingPeer: Peer,
         payload: ByteArrayPayload
     ) {
-        val message =
-            BlindSignatureReplyMessage(
-                BigInteger(payload.bytes)
-            )
-        addMessage(message)
+        val buf = ByteBuffer.wrap(payload.bytes).order(ByteOrder.BIG_ENDIAN)
+        //TODO fix this
+        /* ---------- signature (BigInteger) ---------- */
+        val sigLen   = buf.int
+        val sigBytes = ByteArray(sigLen).also { buf.get(it) }
+        val signature = BigInteger(sigBytes)
+
+        /* ---------- timestamp (Long) ---------- */
+        val timestamp = buf.long
+
+        /* ---------- Schnorr signature on timestamp ---------- */
+        val sigTimeLen   = buf.int
+        val sigTimeBytes = ByteArray(sigTimeLen).also { buf.get(it) }
+        val timestampSignature = SchnorrSignature.fromBytes(sigTimeBytes)
+
+        /* ---------- Schnorr signature on bank-PK ---------- */
+        val sigPkLen   = buf.int
+        val sigPkBytes = ByteArray(sigPkLen).also { buf.get(it) }
+        val bankKeySignature = SchnorrSignature.fromBytes(sigPkBytes)
+
+        /* ---------- bank public key (Element) ---------- */
+        val bankPkLen   = buf.int
+        val bankPkBytes = ByteArray(bankPkLen).also { buf.get(it) }
+
+        /* ---------- deliver to the rest of the app ---------- */
+        val msg = BlindSignatureReplyMessage(
+            signature,
+            timestamp,
+            timestampSignature,
+            bankPkBytes,
+            bankKeySignature
+        )
+        addMessage(msg)
     }
 
     fun getTransactionRandomizationElements(

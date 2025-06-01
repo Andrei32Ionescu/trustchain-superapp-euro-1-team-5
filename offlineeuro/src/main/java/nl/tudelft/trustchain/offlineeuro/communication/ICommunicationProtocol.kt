@@ -16,7 +16,7 @@ interface ICommunicationProtocol {
         val signature: BigInteger,
         val timestamp: Long,
         val timestampSignature: SchnorrSignature,
-        val bankPublicKey: Element,
+        val bankPublicKey: ByteArray,
         val bankKeySignature: SchnorrSignature
     )
 

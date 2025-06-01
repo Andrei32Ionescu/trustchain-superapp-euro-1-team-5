@@ -2,6 +2,8 @@ package nl.tudelft.trustchain.offlineeuro.cryptography
 
 import it.unisa.dia.gas.jpbc.Element
 import java.math.BigInteger
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.security.MessageDigest
 
 data class BlindedChallenge(val challenge: BigInteger, val blindedChallenge: BigInteger, val alpha: BigInteger, val message: ByteArray)
@@ -13,7 +15,21 @@ data class SchnorrSignature(val signature: BigInteger, val encryption: BigIntege
      * @return The [SchnorrSignature] converted a [ByteArray]
      */
     fun toBytes(): ByteArray {
-        return signature.toByteArray() + encryption.toByteArray() + signedMessage
+        val sigBytes = signature.toByteArray()
+        val encBytes = encryption.toByteArray()
+        val msgBytes = signedMessage
+
+        val buf = ByteBuffer.allocate(
+            4 + sigBytes.size +
+                4 + encBytes.size +
+                4 + msgBytes.size
+        ).order(ByteOrder.BIG_ENDIAN)
+
+        buf.putInt(sigBytes.size); buf.put(sigBytes)
+        buf.putInt(encBytes.size); buf.put(encBytes)
+        buf.putInt(msgBytes.size); buf.put(msgBytes)
+
+        return buf.array()
     }
 
     override fun equals(other: Any?): Boolean {
@@ -23,6 +39,35 @@ data class SchnorrSignature(val signature: BigInteger, val encryption: BigIntege
             this.encryption == other.encryption &&
             this.signedMessage.contentEquals(other.signedMessage)
     }
+
+    companion object {
+        /**
+         * Rebuild a [SchnorrSignature] from the byte format produced by [toBytes].
+         *
+         * @param bytes      the raw payload
+         * @param byteOrder  normally [ByteOrder.BIG_ENDIAN] (must match writer)
+         */
+        fun fromBytes(bytes: ByteArray, byteOrder: ByteOrder = ByteOrder.BIG_ENDIAN): SchnorrSignature {
+            val buf = ByteBuffer.wrap(bytes).order(byteOrder)
+
+            /* -- signature -- */
+            val sigLen   = buf.int
+            val sigBytes = ByteArray(sigLen).also { buf.get(it) }
+            val signature = BigInteger(sigBytes)
+
+            /* -- encryption -- */
+            val encLen   = buf.int
+            val encBytes = ByteArray(encLen).also { buf.get(it) }
+            val encryption = BigInteger(encBytes)
+
+            /* -- signed message -- */
+            val msgLen   = buf.int
+            val msgBytes = ByteArray(msgLen).also { buf.get(it) }
+
+            return SchnorrSignature(signature, encryption, msgBytes)
+        }
+    }
+
 }
 
 /**

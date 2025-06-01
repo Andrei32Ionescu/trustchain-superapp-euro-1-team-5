@@ -20,13 +20,21 @@ class DepositedEuroManager(
             firstTheta: ByteArray,
             signature: ByteArray,
             previousProofs: ByteArray?,
+            timestamp: Long,
+            timestampSignature: ByteArray,
+            bankPublicKey: ByteArray,
+            bankKeySignature: ByteArray,
         ->
         DigitalEuro(
             serialNumber,
             amount,
             group.gElementFromBytes(firstTheta),
             deserializeSchnorr(signature)!!,
-            deserializeGSP(previousProofs)
+            deserializeGSP(previousProofs),
+            timestamp,
+            deserializeSchnorr(timestampSignature)!!,
+            group.gElementFromBytes(bankPublicKey),
+            deserializeSchnorr(bankKeySignature)!!,
         )
     }
 
@@ -36,23 +44,31 @@ class DepositedEuroManager(
     }
 
     fun insertDigitalEuro(digitalEuro: DigitalEuro) {
-        val (serialNumber, amount,firstTheta1, signature, proofs) = digitalEuro
+        val (serialNumber, amount,firstTheta1, signature, proofs, timestamp, timestampSignature, bankPublicKey, bankKeySignature) = digitalEuro
         queries.insertDepositedEuro(
             serialNumber,
             amount,
             firstTheta1.toBytes(),
             serialize(signature)!!,
-            serialize(proofs)
+            serialize(proofs),
+            timestamp,
+            serialize(timestampSignature)!!,
+            bankPublicKey.toBytes(),
+            serialize(bankKeySignature)!!
         )
     }
 
     fun getDigitalEurosByDescriptor(digitalEuro: DigitalEuro): List<DigitalEuro> {
-        val (serialNumber,amount, firstTheta1, signature, _) = digitalEuro
+        val (serialNumber,amount, firstTheta1, signature, _, timestamp, timestampSignature, bankPublicKey, bankKeySignature) = digitalEuro
         return queries.getDepositedEuroByDescriptor(
             serialNumber,
             amount,
             firstTheta1.toBytes(),
             serialize(signature)!!,
+            timestamp,
+            serialize(timestampSignature)!!,
+            bankPublicKey.toBytes(),
+            serialize(bankKeySignature)!!,
             digitalEuroMapper
         ).executeAsList()
     }
