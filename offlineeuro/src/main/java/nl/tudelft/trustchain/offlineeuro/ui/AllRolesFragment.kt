@@ -1,6 +1,9 @@
 package nl.tudelft.trustchain.offlineeuro.ui
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
@@ -78,6 +81,8 @@ class AllRolesFragment : OfflineEuroBaseFragment(R.layout.fragment_all_roles_hom
         val ttpButton = view.findViewById<Button>(R.id.all_roles_set_ttp)
         val bankButton = view.findViewById<Button>(R.id.all_roles_set_bank)
         val userButton = view.findViewById<Button>(R.id.all_roles_set_user)
+        val eudiButton = view.findViewById<Button>(R.id.all_roles_eudi_button)
+
         ttpButton.setOnClickListener {
             ttpButton.isEnabled = false
             bankButton.isEnabled = true
@@ -97,6 +102,22 @@ class AllRolesFragment : OfflineEuroBaseFragment(R.layout.fragment_all_roles_hom
             bankButton.isEnabled = true
             userButton.isEnabled = false
             setUserAsChild()
+        }
+
+        eudiButton.setOnClickListener {
+            val client_id= "x509_san_dns:verifier-backend.eudiw.dev"
+            val request_uri=  "https://verifier-backend.eudiw.dev/wallet/request.jwt/w0SiAl9O1SD9BWUx0rUwyl4IT1ZGEFZLa2mtUlSaYM2fZp9UNIhWt9l8kwF9LSMJgHGHnDvFENU1RPkMa9JFtQ"
+            val request_uri_method= "get"
+            val x509_san_dns = "verifier-backend.eudiw.dev"
+            val url = "eudi-openid4vp://?client_id=$client_id&request_uri=$request_uri&request_uri_method=$request_uri_method"
+
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                data = Uri.parse(url)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+
+            Log.d("ToonsStuff", "Starting activity")
+            startActivity(intent)
         }
     }
 
