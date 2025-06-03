@@ -105,4 +105,7 @@ dependencies {
     implementation(files("lib/jpbc-api-2.0.0.jar"))
     implementation(files("lib/jpbc-plaf-2.0.0.jar"))
     implementation(files("lib/jpbc-crypto-2.0.0.jar"))
+
+    // EUDI
+    implementation "com.squareup.okhttp3:okhttp:4.12.0"
 }

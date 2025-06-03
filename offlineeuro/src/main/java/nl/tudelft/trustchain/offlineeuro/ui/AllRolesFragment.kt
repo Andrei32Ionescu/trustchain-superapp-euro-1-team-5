@@ -20,6 +20,15 @@ import nl.tudelft.trustchain.offlineeuro.entity.TTP
 import nl.tudelft.trustchain.offlineeuro.entity.User
 import nl.tudelft.trustchain.offlineeuro.enums.Role
 
+import kotlinx.coroutines.*
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONException
+import org.json.JSONObject
+import java.io.IOException
+import androidx.core.net.toUri
+
 class AllRolesFragment : OfflineEuroBaseFragment(R.layout.fragment_all_roles_home) {
     private lateinit var iPV8CommunicationProtocol: IPV8CommunicationProtocol
     private lateinit var community: OfflineEuroCommunity
@@ -27,6 +36,11 @@ class AllRolesFragment : OfflineEuroBaseFragment(R.layout.fragment_all_roles_hom
     private lateinit var ttp: TTP
     private lateinit var bank: Bank
     private lateinit var user: User
+
+    private val mainScope = CoroutineScope(Dispatchers.Main + Job())
+    private val client = OkHttpClient()
+
+
 
     override fun onViewCreated(
         view: View,
@@ -105,22 +119,117 @@ class AllRolesFragment : OfflineEuroBaseFragment(R.layout.fragment_all_roles_hom
         }
 
         eudiButton.setOnClickListener {
-            val client_id= "x509_san_dns:verifier-backend.eudiw.dev"
-            val request_uri=  "https://verifier-backend.eudiw.dev/wallet/request.jwt/w0SiAl9O1SD9BWUx0rUwyl4IT1ZGEFZLa2mtUlSaYM2fZp9UNIhWt9l8kwF9LSMJgHGHnDvFENU1RPkMa9JFtQ"
-            val request_uri_method= "get"
-            val x509_san_dns = "verifier-backend.eudiw.dev"
-            val url = "eudi-openid4vp://?client_id=$client_id&request_uri=$request_uri&request_uri_method=$request_uri_method"
 
-            val intent = Intent(Intent.ACTION_VIEW).apply {
-                data = Uri.parse(url)
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            val presentationURL = "https://verifier-backend.eudiw.dev/ui/presentations"
+            val body = """
+                {
+                  "type": "vp_token",
+                  "presentation_definition": {
+                    "id": "2d4cf775-3ee3-4f56-9f4b-03cdbcbcca8b",
+                    "input_descriptors": [
+                      {
+                        "id": "eu.europa.ec.eudi.pid.1",
+                        "format": {
+                          "mso_mdoc": {
+                            "alg": [
+                              "ES256",
+                              "ES384",
+                              "ES512",
+                              "EdDSA"
+                            ]
+                          }
+                        },
+                        "constraints": {
+                          "limit_disclosure": "required",
+                          "fields": [
+                            {
+                              "path": [
+                                "${'$'}['eu.europa.ec.eudi.pid.1']['family_name']"
+                              ],
+                              "intent_to_retain": false
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  "nonce": "29546f2b-d085-4588-b2bc-5c3523b0c79d",
+                  "request_uri_method": "get"
+                }
+            """.trimIndent()
+
+            mainScope.launch {
+                // Start verifier transaction
+                val result = makeAPIRequest(presentationURL, body)
+
+                if (result == "") {
+                    return@launch
+                }
+
+                // Parse JSON
+                val jsonObject = JSONObject(result)
+                val transactionId = jsonObject.optString("transaction_id", null)
+                val clientId = jsonObject.optString("client_id", null)
+                val requestURI = jsonObject.optString("request_uri", null)
+                val requestURIMethod = "get"
+                Log.d("EUDI", "Transaction ID: $transactionId")
+                Log.d("EUDI", "Transaction ID: $requestURI")
+
+                // Send authorization request to the wallet to handle it
+                val walletRequestURL = "eudi-openid4vp://?client_id=$clientId&request_uri=$requestURI&request_uri_method=$requestURIMethod"
+
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    data = walletRequestURL.toUri()
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+
+                startActivity(intent)
             }
-
-            Log.d("ToonsStuff", "Starting activity")
-            startActivity(intent)
         }
     }
 
+
+    private suspend fun makeAPIRequest(url: String, jsonBody: String): String {
+        Log.d("EUDI", "Calling api endpoint: $url")
+
+        return withContext(Dispatchers.IO) {
+            try {
+                val mediaType = "application/json; charset=utf-8".toMediaType()
+                val requestBody = jsonBody.toRequestBody(mediaType)
+
+                val request = Request.Builder()
+                    .url(url)
+                    .post(requestBody)
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        Log.e("API_CALL", "Unsuccessful response: ${response.code}")
+                        return@withContext ""
+                    }
+
+                    val responseBodyString = response.body?.string()
+                    if (responseBodyString.isNullOrEmpty()) {
+                        Log.e("EUDI", "Empty response body")
+                        return@withContext ""
+                    }
+
+                    Log.d("EUDI", "Response: $responseBodyString")
+
+                    return@withContext responseBodyString
+                }
+            } catch (e: IOException) {
+                Log.e("EUDI", "IOException: ${e.message}", e)
+                return@withContext ""
+            } catch (e: JSONException) {
+                Log.e("EUDI", "JSON parsing error: ${e.message}", e)
+                return@withContext ""
+            } catch (e: Exception) {
+                Log.e("EUDI", "Exception: ${e.message}", e)
+                return@withContext ""
+            }
+        }
+    }
     private fun setTTPAsChild() {
         iPV8CommunicationProtocol.participant = ttp
         val ttpFragment = TTPHomeFragment()
