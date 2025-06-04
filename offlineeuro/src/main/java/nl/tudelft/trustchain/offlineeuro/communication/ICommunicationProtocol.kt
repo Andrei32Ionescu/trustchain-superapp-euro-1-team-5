@@ -16,6 +16,7 @@ interface ICommunicationProtocol {
     fun register(
         userName: String,
         publicKey: Element,
+        legalName: String,
         nameTTP: String
     )
 

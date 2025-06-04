@@ -166,8 +166,6 @@ class AllRolesFragment : OfflineEuroBaseFragment(R.layout.fragment_all_roles_hom
                 val clientId = jsonObject.optString("client_id")
                 val requestURI = jsonObject.optString("request_uri")
                 val requestURIMethod = "get"
-                Log.d("EUDI", "Transaction ID: $transactionId")
-                Log.d("EUDI", "Transaction ID: $requestURI")
 
                 // Send authorization request to the wallet to handle it
                 val walletRequestURL = "eudi-openid4vp://?client_id=$clientId&request_uri=$requestURI&request_uri_method=$requestURIMethod"

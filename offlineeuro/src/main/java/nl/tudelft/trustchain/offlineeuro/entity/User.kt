@@ -24,7 +24,7 @@ class User(
         this.group = group
 
         if (runSetup) {
-            setUp()
+            setUp() // TODO: Add eudi logic
         } else {
             generateKeyPair()
         }
@@ -99,6 +99,6 @@ class User(
     override fun reset() {
         randomizationElementMap.clear()
         walletManager!!.clearWalletEntries()
-        setUp()
+        setUp()   // TODO: Add eudi logic
     }
 }
