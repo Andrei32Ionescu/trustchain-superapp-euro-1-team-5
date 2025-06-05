@@ -6,6 +6,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.lifecycle.lifecycleScope
 import nl.tudelft.trustchain.offlineeuro.R
 import nl.tudelft.trustchain.offlineeuro.communication.IPV8CommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.community.OfflineEuroCommunity
@@ -42,7 +43,7 @@ class UserHomeFragment : OfflineEuroBaseFragment(R.layout.fragment_user_home) {
             val addressBookManager = AddressBookManager(context, group)
             communicationProtocol = IPV8CommunicationProtocol(addressBookManager, community)
             try {
-                user = User(userName, group, context, null, communicationProtocol, onDataChangeCallback = onUserDataChangeCallBack)
+                user = User(userName, group, context, null, communicationProtocol, onDataChangeCallback = onUserDataChangeCallBack, coroutineScope =  viewLifecycleOwner.lifecycleScope)
                 communicationProtocol.scopePeers()
             } catch (e: Exception) {
                 Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()

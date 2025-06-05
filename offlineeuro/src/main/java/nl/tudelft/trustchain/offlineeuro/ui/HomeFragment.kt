@@ -86,6 +86,29 @@ class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
         alertDialog.show()
     }
 
+    private fun showEUDIWindow() {
+        val alertDialogBuilder = AlertDialog.Builder(requireContext())
+
+        val editText = EditText(requireContext())
+        alertDialogBuilder.setView(editText)
+        alertDialogBuilder.setTitle("Pick an username")
+        alertDialogBuilder.setMessage("")
+        // Set positive button
+        alertDialogBuilder.setPositiveButton("Join!") { dialog, which ->
+            val username = editText.text.toString()
+            moveToUserHome(username)
+        }
+
+        // Set negative button
+        alertDialogBuilder.setNegativeButton("Cancel") { dialog, which ->
+            dialog.cancel()
+        }
+
+        // Create and show the AlertDialog
+        val alertDialog = alertDialogBuilder.create()
+        alertDialog.show()
+    }
+
     private fun moveToUserHome(userName: String) {
         val bundle = bundleOf("userName" to userName)
         findNavController().navigate(R.id.nav_home_userhome, bundle)

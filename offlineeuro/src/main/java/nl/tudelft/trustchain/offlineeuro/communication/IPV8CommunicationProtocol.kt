@@ -243,7 +243,7 @@ class IPV8CommunicationProtocol(
 
         val ttp = participant as TTP
         val publicKey = ttp.group.gElementFromBytes(message.userPKBytes)
-        ttp.registerUser(message.userName, publicKey)
+        ttp.registerUser(message.userName, publicKey, message.legalName)
     }
 
     private fun handleAddressRequestMessage(message: AddressRequestMessage) {
