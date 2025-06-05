@@ -34,7 +34,8 @@ class RegisteredUserManager(
         RegisteredUser(
             id,
             name,
-            bilinearGroup.pairing.g1.newElementFromBytes(publicKey).immutable
+            bilinearGroup.pairing.g1.newElementFromBytes(publicKey).immutable,
+            legalName
         )
     }
 
