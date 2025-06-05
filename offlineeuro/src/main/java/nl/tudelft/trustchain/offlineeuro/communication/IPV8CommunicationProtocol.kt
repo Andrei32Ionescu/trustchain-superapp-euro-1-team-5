@@ -1,6 +1,8 @@
 package nl.tudelft.trustchain.offlineeuro.communication
 
+import android.util.Log
 import it.unisa.dia.gas.jpbc.Element
+import nl.tudelft.ipv8.Peer
 import nl.tudelft.trustchain.offlineeuro.community.OfflineEuroCommunity
 import nl.tudelft.trustchain.offlineeuro.community.message.AddressMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.AddressRequestMessage
@@ -16,6 +18,7 @@ import nl.tudelft.trustchain.offlineeuro.community.message.FraudControlRequestMe
 import nl.tudelft.trustchain.offlineeuro.community.message.ICommunityMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.MessageList
 import nl.tudelft.trustchain.offlineeuro.community.message.TTPRegistrationMessage
+import nl.tudelft.trustchain.offlineeuro.community.message.TTPRegistrationReplyMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.TransactionMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.TransactionRandomizationElementsReplyMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.TransactionRandomizationElementsRequestMessage
@@ -62,11 +65,19 @@ class IPV8CommunicationProtocol(
     override fun register(
         userName: String,
         publicKey: Element,
-        legalName: String,
+        transactionId: String,
         nameTTP: String
     ) {
+        Log.d("EUDI", "Registering")
         val ttpAddress = addressBookManager.getAddressByName(nameTTP)
-        community.registerAtTTP(userName, publicKey.toBytes(), legalName, ttpAddress.peerPublicKey!!)
+        community.registerAtTTP(userName, publicKey.toBytes(), transactionId, ttpAddress.peerPublicKey!!)
+
+//        val message = waitForMessage(CommunityMessageType.TTPRegistrationReplyMessage) as TTPRegistrationReplyMessage
+//
+//        if (participant !is User) {
+//            return
+//        }
+//        (participant as User).onReceivedTTPRegisterReply() //TODO CHECK STATUS
     }
 
     override fun getBlindSignatureRandomness(
@@ -240,10 +251,11 @@ class IPV8CommunicationProtocol(
         if (participant !is TTP) {
             return
         }
-
+        val tid = message.transactionId
+        Log.d("EUDI","Handle registration message, transaction id: $tid")
         val ttp = participant as TTP
         val publicKey = ttp.group.gElementFromBytes(message.userPKBytes)
-        ttp.registerUser(message.userName, publicKey, message.legalName)
+        ttp.registerUser(message.userName, publicKey, message.transactionId, message.requestingPeer)
     }
 
     private fun handleAddressRequestMessage(message: AddressRequestMessage) {
@@ -279,6 +291,18 @@ class IPV8CommunicationProtocol(
         return
     }
 
+    // received by user
+    private fun handleRegistrationReplyMessage(message: TTPRegistrationReplyMessage) {
+        if (participant !is User) {
+            return
+        }
+        (participant as User).onReceivedTTPRegisterReply()
+
+//        val message = waitForMessage(CommunityMessageType.TTPRegistrationReplyMessage) as TTPRegistrationReplyMessage
+//        return message.result
+        // do user stuff based on status
+    }
+
     private fun getParticipantRole(): Role {
         return when (participant) {
             is User -> Role.User
@@ -286,5 +310,15 @@ class IPV8CommunicationProtocol(
             is Bank -> Role.Bank
             else -> throw Exception("Unknown role")
         }
+    }
+
+    override fun sendRegisterAtTTPReplyMessage(
+        status: String,
+        requestingPeer: Peer
+    ) {
+        community.sendRegisterAtTTPReplyMessage(
+            status,
+            requestingPeer,
+        )
     }
 }

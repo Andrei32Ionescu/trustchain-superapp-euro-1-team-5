@@ -1,5 +1,6 @@
 package nl.tudelft.trustchain.offlineeuro.entity
 
+import android.util.Log
 import it.unisa.dia.gas.jpbc.Element
 import nl.tudelft.trustchain.offlineeuro.communication.ICommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.cryptography.BilinearGroup
@@ -18,10 +19,13 @@ abstract class Participant(
     val randomizationElementMap: HashMap<Element, Element> = hashMapOf()
     lateinit var crs: CRS
 
-    fun setUp(legalName: String = "") {
+    fun setUp(transactionId: String = "") {
+        Log.d("EUDI", "User setp 1")
         getGroupDescriptionAndCRS()
+        Log.d("EUDI", "User setp 2")
         generateKeyPair()
-        registerAtTTP(legalName)
+        Log.d("EUDI", "User setp 3")
+        registerAtTTP(transactionId)
     }
 
     fun getGroupDescriptionAndCRS() {
@@ -33,9 +37,9 @@ abstract class Participant(
         publicKey = group.g.powZn(privateKey)
     }
 
-    fun registerAtTTP(legalName: String = "") {
+    fun registerAtTTP(transactionId: String = "") {
         // TODO NAME OF TTP
-        communicationProtocol.register(name, publicKey, legalName, "TTP")
+        communicationProtocol.register(name, publicKey, transactionId, "TTP")
     }
 
     fun generateRandomizationElements(receiverPublicKey: Element): RandomizationElements {
