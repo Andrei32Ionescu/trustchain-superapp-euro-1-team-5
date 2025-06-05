@@ -106,7 +106,7 @@ class IPV8CommunicationProtocol(
 
         val replyMessage = waitForMessage(CommunityMessageType.BlindSignatureReplyMessage) as BlindSignatureReplyMessage
         val newResponse = ICommunicationProtocol.BlindSignatureResponse(replyMessage.signature, replyMessage.timestamp, replyMessage.timestampSignature, replyMessage.bankPublicKey, replyMessage.bankKeySignature)
-            return newResponse
+        return newResponse
     }
 
     override fun requestTransactionRandomness(
@@ -129,7 +129,7 @@ class IPV8CommunicationProtocol(
             peerAddress.peerPublicKey!!,
             transactionDetails.toTransactionDetailsBytes()
         )
-        // Log.d("IPV8Protocol", "Sent transaction details to $userNameReceiver")
+        Log.d("IPV8Protocol", "Sent transaction details to $userNameReceiver")
 
         val message = waitForMessage(CommunityMessageType.TransactionResultMessage) as TransactionResultMessage
         return message.result
@@ -246,6 +246,8 @@ class IPV8CommunicationProtocol(
             } else {
                 addressBookManager.getAddressByName("Bank").publicKey
             }
+
+        Log.d("ss", "TEEEEEEEEEEEEEEEEEEEEEEEEESSSSSSSSSSSSSSSSSSSSSSSSSSSTTTTTTTTTTTTTTTTTTTTTTTTTTT")
 
         val group = participant.group
         val publicKey = group.gElementFromBytes(message.publicKeyBytes)

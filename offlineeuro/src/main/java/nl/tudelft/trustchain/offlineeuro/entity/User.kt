@@ -2,6 +2,8 @@ package nl.tudelft.trustchain.offlineeuro.entity
 
 import android.content.Context
 import android.util.Log
+import android.widget.Toast
+import androidx.core.content.ContentProviderCompat.requireContext
 import it.unisa.dia.gas.jpbc.Element
 import nl.tudelft.trustchain.offlineeuro.communication.ICommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.cryptography.BilinearGroup
@@ -47,6 +49,7 @@ class User(
         val transactionDetails = wallet.spendSpecificEuro(digitalEuro, randomizationElements, group, crs, deposit)
             ?: throw Exception("Cannot spend this specific euro")
 
+        Log.d("TransactionDetails", transactionDetails.toString())
         val result = communicationProtocol.sendTransactionDetails(nameReceiver, transactionDetails)
         onDataChangeCallback?.invoke(result)
         return result

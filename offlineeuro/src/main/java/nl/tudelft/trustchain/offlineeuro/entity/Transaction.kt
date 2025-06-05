@@ -1,5 +1,6 @@
 package nl.tudelft.trustchain.offlineeuro.entity
 
+import android.util.Log
 import it.unisa.dia.gas.jpbc.Element
 import nl.tudelft.trustchain.offlineeuro.cryptography.BilinearGroup
 import nl.tudelft.trustchain.offlineeuro.cryptography.CRS
@@ -127,7 +128,7 @@ object Transaction {
 
         if (!validateTimestampChain(digitalEuro, crs, bilinearGroup)) {
             return TransactionResult.INVALID_TIMESTAMP_CHAIN
-        }   
+        }
 
         // Validate that d2 is constructed correctly
         val usedY = transactionProof.usedY
@@ -155,14 +156,10 @@ object Transaction {
         bilinearGroup: BilinearGroup
     ): Boolean {
         // Check all required fields are present
-        if (digitalEuro.withdrawalTimestamp == null || 
-            digitalEuro.timestampSignature == null ||
-            digitalEuro.bankPublicKey == null || 
-            digitalEuro.bankKeySignature == null ||
-            crs.ttpPublicKey == null) {
+        if (crs.ttpPublicKey == null) {
+            Log.d("OfflineEuro", "TTP public key is null")
             return false
         }
-        
         // Verify TTP signed the bank's public key
         val bankKeyVerified = Schnorr.verifySchnorrSignature(
             digitalEuro.bankKeySignature,
@@ -170,9 +167,10 @@ object Transaction {
             bilinearGroup
         )
         if (!bankKeyVerified) {
+            Log.d("OfflineEuro", "Bank key signature is invalid")
             return false
         }
-        
+
         // Verify bank signed the timestamp
         val timestampVerified = Schnorr.verifySchnorrSignature(
             digitalEuro.timestampSignature,
@@ -180,15 +178,17 @@ object Transaction {
             bilinearGroup
         )
         if (!timestampVerified) {
+            Log.d("OfflineEuro", "Bank timestamp signature is invalid")
             return false
         }
-        
+
         // Verify the signed message is the actual timestamp
         val expectedTimestampBytes = digitalEuro.withdrawalTimestamp.toString().toByteArray()
         if (!digitalEuro.timestampSignature.signedMessage.contentEquals(expectedTimestampBytes)) {
+            Log.d("OfflineEuro", "Bank timestamp is invalid")
             return false
         }
-        
+
         return true
     }
 

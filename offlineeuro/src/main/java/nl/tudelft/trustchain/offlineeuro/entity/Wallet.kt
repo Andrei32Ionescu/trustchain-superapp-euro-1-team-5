@@ -1,11 +1,13 @@
 package nl.tudelft.trustchain.offlineeuro.entity
 
+import android.util.Log
 import it.unisa.dia.gas.jpbc.Element
 import nl.tudelft.trustchain.offlineeuro.cryptography.BilinearGroup
 import nl.tudelft.trustchain.offlineeuro.cryptography.CRS
 import nl.tudelft.trustchain.offlineeuro.cryptography.RandomizationElements
 import nl.tudelft.trustchain.offlineeuro.cryptography.SchnorrSignature
 import nl.tudelft.trustchain.offlineeuro.db.WalletManager
+import java.io.Console
 
 data class WalletEntry(
     val digitalEuro: DigitalEuro,
@@ -30,7 +32,7 @@ data class WalletEntry(
         val currentTime = System.currentTimeMillis()
         val referenceTimestamp = digitalEuro.withdrawalTimestamp
         val timePassed = (currentTime - referenceTimestamp) / (1000 * 60 * 60)
-        
+
         val currentTransferCount = calculateTransferCount()
 
         var fee = 0.01
@@ -103,6 +105,8 @@ class Wallet(
         // Check if this token is spendable (not already spent)
         if (walletEntry.timesSpent > 0) return null
 
+        Log.d("Wallet", "Spending euro with times spent: ${walletEntry.timesSpent}")
+        println("Spending euro with times spent: ${walletEntry.timesSpent}")
         walletManager.incrementTimesSpent(digitalEuro)
 
         if (deposit == true) {

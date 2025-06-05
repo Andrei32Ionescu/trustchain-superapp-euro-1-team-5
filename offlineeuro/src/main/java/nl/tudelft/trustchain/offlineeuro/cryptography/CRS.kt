@@ -12,7 +12,7 @@ data class CRS(
     val v: Element,
     val hPrime: Element,
     val vPrime: Element,
-    val ttpPublicKey: Element? = null,
+    val ttpPublicKey: Element
 ) {
     fun toCRSBytes(): CRSBytes {
         return CRSBytes(
@@ -24,7 +24,7 @@ data class CRS(
             v.toBytes(),
             hPrime.toBytes(),
             vPrime.toBytes(),
-            ttpPublicKey?.toBytes()
+            ttpPublicKey.toBytes()
         )
     }
 
@@ -56,7 +56,7 @@ data class CRSBytes(
     val v: ByteArray,
     val hPrime: ByteArray,
     val vPrime: ByteArray,
-    val ttpPublicKey: ByteArray? = null
+    val ttpPublicKey: ByteArray
 ) {
     fun toCRS(group: BilinearGroup): CRS {
         return CRS(
@@ -68,7 +68,7 @@ data class CRSBytes(
             group.hElementFromBytes(v),
             group.hElementFromBytes(hPrime),
             group.hElementFromBytes(vPrime),
-            ttpPublicKey?.let {group.gElementFromBytes(it)}
+            ttpPublicKey.let { group.gElementFromBytes(it) }
         )
     }
 
@@ -91,7 +91,7 @@ data class CRSBytes(
 }
 
 object CRSGenerator {
-    fun generateCRSMap(bilinearGroup: BilinearGroup, ttpPublicKey: Element?): Pair<CRS, Map<Element, Element>> {
+    fun generateCRSMap(bilinearGroup: BilinearGroup, ttpPublicKey: Element): Pair<CRS, Map<Element, Element>> {
         val group1 = bilinearGroup.g
         val group2 = bilinearGroup.h
 

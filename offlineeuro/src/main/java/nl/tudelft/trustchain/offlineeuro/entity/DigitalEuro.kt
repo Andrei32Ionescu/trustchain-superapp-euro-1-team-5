@@ -23,10 +23,10 @@ data class DigitalEuroBytes(
     val firstTheta1Bytes: ByteArray,
     val signatureBytes: ByteArray,
     val proofsBytes: ByteArray,
-    val withdrawalTimestampBytes: ByteArray? = null,
-    val timestampSignatureBytes: ByteArray? = null,
-    val bankPublicKeyBytes: ByteArray? = null,
-    val bankKeySignatureBytes: ByteArray? = null
+    val withdrawalTimestampBytes: ByteArray,
+    val timestampSignatureBytes: ByteArray,
+    val bankPublicKeyBytes: ByteArray,
+    val bankKeySignatureBytes: ByteArray
 ) : Serializable {
     fun toDigitalEuro(group: BilinearGroup): DigitalEuro {
         return DigitalEuro(
@@ -35,9 +35,9 @@ data class DigitalEuroBytes(
             group.gElementFromBytes(firstTheta1Bytes),
             SchnorrSignatureSerializer.deserializeSchnorrSignatureBytes(signatureBytes)!!,
             GrothSahaiSerializer.deserializeProofListBytes(proofsBytes, group),
-            withdrawalTimestampBytes?.toString(Charsets.UTF_8)!!.toLong(),
+            withdrawalTimestampBytes.toString(Charsets.UTF_8).toLong(),
             timestampSignatureBytes.let { SchnorrSignatureSerializer.deserializeSchnorrSignatureBytes(it)!! },
-            bankPublicKeyBytes.let { group.gElementFromBytes(it!!) },
+            bankPublicKeyBytes.let { group.gElementFromBytes(it) },
             bankKeySignatureBytes.let { SchnorrSignatureSerializer.deserializeSchnorrSignatureBytes(it)!! }
         )
     }
@@ -102,12 +102,12 @@ data class DigitalEuro(
             serialNumber.toByteArray(),
             amount.toString().toByteArray(),
             firstTheta1.toBytes(),
-            SchnorrSignatureSerializer.serializeSchnorrSignature(signature)!!,
+            SchnorrSignatureSerializer.serializeSchnorrSignature(signature),
             proofBytes ?: ByteArray(0),
-            withdrawalTimestamp?.toString()?.toByteArray(),
-            timestampSignature?.let { SchnorrSignatureSerializer.serializeSchnorrSignature(it) },
-            bankPublicKey?.toBytes(),
-            bankKeySignature?.let { SchnorrSignatureSerializer.serializeSchnorrSignature(it) }
+            withdrawalTimestamp.toString().toByteArray(),
+            timestampSignature.let { SchnorrSignatureSerializer.serializeSchnorrSignature(it) },
+            bankPublicKey.toBytes(),
+            bankKeySignature.let { SchnorrSignatureSerializer.serializeSchnorrSignature(it) }
         )
     }
 }

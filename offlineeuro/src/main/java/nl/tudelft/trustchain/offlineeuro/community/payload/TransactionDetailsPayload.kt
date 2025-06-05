@@ -23,8 +23,10 @@ class TransactionDetailsPayload(
         payload += serializeVarLen(digitalEuroBytes.firstTheta1Bytes)
         payload += serializeVarLen(digitalEuroBytes.signatureBytes)
         payload += serializeVarLen(digitalEuroBytes.proofsBytes)
-
-
+        payload += serializeVarLen(digitalEuroBytes.withdrawalTimestampBytes)
+        payload += serializeVarLen(digitalEuroBytes.timestampSignatureBytes)
+        payload += serializeVarLen(digitalEuroBytes.bankPublicKeyBytes)
+        payload += serializeVarLen(digitalEuroBytes.bankKeySignatureBytes)
 
         // Add the current transaction parts
         val currentTransactionBytes = transactionDetailsBytes.currentTransactionProofBytes
@@ -66,6 +68,18 @@ class TransactionDetailsPayload(
             val (proofBytes, proofBytesSize) = deserializeVarLen(buffer, localOffset)
             localOffset += proofBytesSize
 
+            val (withdrawalTimestampBytes, withdrawalTimestampSize) = deserializeVarLen(buffer, localOffset)
+            localOffset += withdrawalTimestampSize
+
+            val (timestampSignatureBytes, timestampSignatureSize) = deserializeVarLen(buffer, localOffset)
+            localOffset += timestampSignatureSize
+
+            val (bankPublicKeyBytes, bankPublicKeySize) = deserializeVarLen(buffer, localOffset)
+            localOffset += bankPublicKeySize
+
+            val (bankKeySignatureBytes, bankKeySignatureSize) = deserializeVarLen(buffer, localOffset)
+            localOffset += bankKeySignatureSize
+
             // Current Transaction Parts
             val (grothSahaiProofBytes, grothSahaiProofSize) = deserializeVarLen(buffer, localOffset)
             localOffset += grothSahaiProofSize
@@ -94,7 +108,7 @@ class TransactionDetailsPayload(
             localOffset += spenderPublicKeySize
 
             val digitalEuroBytes =
-                DigitalEuroBytes(serialNumberBytes, amountBytes,firstTheta1Bytes, signatureBytes, proofBytes)
+                DigitalEuroBytes(serialNumberBytes, amountBytes,firstTheta1Bytes, signatureBytes, proofBytes, withdrawalTimestampBytes, timestampSignatureBytes, bankPublicKeyBytes, bankKeySignatureBytes)
             val transactionProofBytes =
                 TransactionProofBytes(grothSahaiProofBytes, usedYBytes, usedVSBytes)
 

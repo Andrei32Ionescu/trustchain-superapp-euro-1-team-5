@@ -86,7 +86,8 @@ class BilinearGroupCRSPayload(
                     crsH,
                     crsV,
                     crsHPrime,
-                    crsVPrime
+                    crsVPrime,
+                    ttpPubKeyBytes
                 )
 
             return Pair(

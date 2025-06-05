@@ -471,6 +471,7 @@ class OfflineEuroCommunity(
     ) {
         val peer = getPeerByPublicKeyBytes(publicKeyReceiver)
 
+
         peer ?: throw Exception("User not found")
 
         val packet =
@@ -486,7 +487,7 @@ class OfflineEuroCommunity(
     }
 
     fun onTransactionPacket(packet: Packet) {
-        //Log.d("OfflineEuroCommunity", "On transaction packet!")
+        Log.d("OfflineEuroCommunity", "On transaction packet!")
         val (peer, payload) = packet.getAuthPayload(TransactionDetailsPayload)
         onTransaction(peer, payload)
     }
@@ -495,7 +496,7 @@ class OfflineEuroCommunity(
         peer: Peer,
         payload: TransactionDetailsPayload
     ) {
-        //Log.d("OfflineEuroCommunity", "On transaction message!")
+        Log.d("OfflineEuroCommunity", "On transaction message!")
         val publicKey = payload.publicKey
         val transactionDetailsBytes = payload.transactionDetailsBytes
         val message = TransactionMessage(publicKey, transactionDetailsBytes, peer)
