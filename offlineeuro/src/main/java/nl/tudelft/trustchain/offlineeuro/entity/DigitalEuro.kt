@@ -26,7 +26,9 @@ data class DigitalEuroBytes(
     val withdrawalTimestampBytes: ByteArray,
     val timestampSignatureBytes: ByteArray,
     val bankPublicKeyBytes: ByteArray,
-    val bankKeySignatureBytes: ByteArray
+    val bankKeySignatureBytes: ByteArray,
+    val amountSignatureBytes: ByteArray
+
 ) : Serializable {
     fun toDigitalEuro(group: BilinearGroup): DigitalEuro {
         return DigitalEuro(
@@ -38,7 +40,8 @@ data class DigitalEuroBytes(
             withdrawalTimestampBytes.toString(Charsets.UTF_8).toLong(),
             timestampSignatureBytes.let { SchnorrSignatureSerializer.deserializeSchnorrSignatureBytes(it)!! },
             bankPublicKeyBytes.let { group.gElementFromBytes(it) },
-            bankKeySignatureBytes.let { SchnorrSignatureSerializer.deserializeSchnorrSignatureBytes(it)!! }
+            bankKeySignatureBytes.let { SchnorrSignatureSerializer.deserializeSchnorrSignatureBytes(it)!! },
+            amountSignatureBytes.let {SchnorrSignatureSerializer.deserializeSchnorrSignatureBytes(it)!!}
         )
     }
 }
@@ -52,7 +55,8 @@ data class DigitalEuro(
     val withdrawalTimestamp: Long,
     val timestampSignature: SchnorrSignature,
     val bankPublicKey: Element,
-    val bankKeySignature: SchnorrSignature
+    val bankKeySignature: SchnorrSignature,
+    val amountSignature: SchnorrSignature
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -107,7 +111,8 @@ data class DigitalEuro(
             withdrawalTimestamp.toString().toByteArray(),
             timestampSignature.let { SchnorrSignatureSerializer.serializeSchnorrSignature(it) },
             bankPublicKey.toBytes(),
-            bankKeySignature.let { SchnorrSignatureSerializer.serializeSchnorrSignature(it) }
+            bankKeySignature.let { SchnorrSignatureSerializer.serializeSchnorrSignature(it) },
+            amountSignature.let { SchnorrSignatureSerializer.serializeSchnorrSignature(it) }
         )
     }
 }

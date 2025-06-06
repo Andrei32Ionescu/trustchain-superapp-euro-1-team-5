@@ -9,7 +9,8 @@ class BlindSignatureReplyMessage(
     val timestamp: Long,
     val timestampSignature: SchnorrSignature,
     val bankPublicKey: ByteArray,
-    val bankKeySignature: SchnorrSignature
+    val bankKeySignature: SchnorrSignature,
+    val amountSignature: SchnorrSignature
 ) : ICommunityMessage {
     override val messageType = CommunityMessageType.BlindSignatureReplyMessage
 }

@@ -58,7 +58,7 @@ class Bank(
         userPublicKey: Element,
         amount: Long
     ): ICommunicationProtocol.BlindSignatureResponse {  // Return signature and metadata
-        val k = lookUp(userPublicKey) ?: return ICommunicationProtocol.BlindSignatureResponse(BigInteger.ZERO,3,SchnorrSignature(BigInteger.ZERO, BigInteger.ZERO, ByteArray(0)), userPublicKey.toBytes(), SchnorrSignature(BigInteger.ZERO, BigInteger.ZERO, ByteArray(0)))
+        val k = lookUp(userPublicKey) ?: return ICommunicationProtocol.BlindSignatureResponse(BigInteger.ZERO,3,SchnorrSignature(BigInteger.ZERO, BigInteger.ZERO, ByteArray(0)), userPublicKey.toBytes(), SchnorrSignature(BigInteger.ZERO, BigInteger.ZERO, ByteArray(0)),SchnorrSignature(BigInteger.ZERO, BigInteger.ZERO, ByteArray(0)))
         remove(userPublicKey)
 
         // Create timestamp
@@ -71,13 +71,20 @@ class Bank(
             group
         )
 
-        val bankPk = group.gElementFromBytes(publicKey.toBytes()) //TODO CHANGE THIS
+        // Sign the initial amount with bank's private key
+        val amountSignature = Schnorr.schnorrSignature(
+            privateKey,
+            amount.toString().toByteArray(Charsets.UTF_8),
+            group
+        )
+
+        val bankPk = group.gElementFromBytes(publicKey.toBytes())
 
         val blindSignature = Schnorr.signBlindedChallenge(k, challenge, privateKey)
 
         onDataChangeCallback?.invoke("A token of €${amount.toFloat()/100.0} was withdrawn by $userPublicKey")
 
-        return ICommunicationProtocol.BlindSignatureResponse(blindSignature, timestamp, timestampSignature, bankPk.toBytes(), ttpSignatureOnPublicKey!!)
+        return ICommunicationProtocol.BlindSignatureResponse(blindSignature, timestamp, timestampSignature, bankPk.toBytes(), ttpSignatureOnPublicKey!!, amountSignature)
     }
 
     fun getWithdrawalMetadata(): Pair<Element, SchnorrSignature> {

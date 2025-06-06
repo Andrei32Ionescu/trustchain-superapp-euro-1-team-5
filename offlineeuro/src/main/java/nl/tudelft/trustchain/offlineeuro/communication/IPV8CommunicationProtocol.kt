@@ -105,7 +105,7 @@ class IPV8CommunicationProtocol(
         community.getBlindSignature(challenge, publicKey.toBytes(), bankAddress.peerPublicKey!!, amount)
 
         val replyMessage = waitForMessage(CommunityMessageType.BlindSignatureReplyMessage) as BlindSignatureReplyMessage
-        val newResponse = ICommunicationProtocol.BlindSignatureResponse(replyMessage.signature, replyMessage.timestamp, replyMessage.timestampSignature, replyMessage.bankPublicKey, replyMessage.bankKeySignature)
+        val newResponse = ICommunicationProtocol.BlindSignatureResponse(replyMessage.signature, replyMessage.timestamp, replyMessage.timestampSignature, replyMessage.bankPublicKey, replyMessage.bankKeySignature, replyMessage.amountSignature)
         return newResponse
     }
 
@@ -223,10 +223,10 @@ class IPV8CommunicationProtocol(
         val challenge = message.challenge
         val amount = message.amount
 
-        val tripleSignature = bank.createBlindSignature(challenge, publicKey,amount)
+        val blindSignatureResponse = bank.createBlindSignature(challenge, publicKey,amount)
 
         val requestingPeer = message.peer
-        community.sendBlindSignature(tripleSignature, requestingPeer)
+        community.sendBlindSignature(blindSignatureResponse, requestingPeer)
     }
 
     private fun handleTransactionRandomizationElementsRequest(message: TransactionRandomizationElementsRequestMessage) {

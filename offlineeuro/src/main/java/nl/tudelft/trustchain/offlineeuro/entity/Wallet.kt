@@ -39,8 +39,8 @@ data class WalletEntry(
 
         fee += (timePassed / 24) * 0.005
 
-        if (currentTransferCount > 3) {
-            fee += (currentTransferCount - 3) * 0.05
+        if (currentTransferCount > 5) {
+            fee += (currentTransferCount - 5) * 0.05
         }
 
         return fee
@@ -48,7 +48,7 @@ data class WalletEntry(
 
     fun getValueAfterFee(): Long {
         val fee = calculateTransactionFee()
-        val left = (digitalEuro.amount.toFloat() * (1.00-fee)).toLong()
+        val left = (String(digitalEuro.amountSignature.signedMessage, Charsets.UTF_8).toFloat() * (1.00-fee)).toLong()
 
         return left
     }

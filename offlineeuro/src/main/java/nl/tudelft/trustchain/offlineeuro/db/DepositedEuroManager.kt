@@ -24,6 +24,7 @@ class DepositedEuroManager(
             timestampSignature: ByteArray,
             bankPublicKey: ByteArray,
             bankKeySignature: ByteArray,
+            amountSignature: ByteArray
         ->
         DigitalEuro(
             serialNumber,
@@ -35,6 +36,7 @@ class DepositedEuroManager(
             deserializeSchnorr(timestampSignature)!!,
             group.gElementFromBytes(bankPublicKey),
             deserializeSchnorr(bankKeySignature)!!,
+            deserializeSchnorr(amountSignature)!!
         )
     }
 
@@ -44,7 +46,7 @@ class DepositedEuroManager(
     }
 
     fun insertDigitalEuro(digitalEuro: DigitalEuro) {
-        val (serialNumber, amount,firstTheta1, signature, proofs, timestamp, timestampSignature, bankPublicKey, bankKeySignature) = digitalEuro
+        val (serialNumber, amount,firstTheta1, signature, proofs, timestamp, timestampSignature, bankPublicKey, bankKeySignature, amountSignature) = digitalEuro
         queries.insertDepositedEuro(
             serialNumber,
             amount,
@@ -54,12 +56,13 @@ class DepositedEuroManager(
             timestamp,
             serialize(timestampSignature)!!,
             bankPublicKey.toBytes(),
-            serialize(bankKeySignature)!!
+            serialize(bankKeySignature)!!,
+            serialize(amountSignature)!!
         )
     }
 
     fun getDigitalEurosByDescriptor(digitalEuro: DigitalEuro): List<DigitalEuro> {
-        val (serialNumber,amount, firstTheta1, signature, _, timestamp, timestampSignature, bankPublicKey, bankKeySignature) = digitalEuro
+        val (serialNumber,amount, firstTheta1, signature, _, timestamp, timestampSignature, bankPublicKey, bankKeySignature, amountSignature) = digitalEuro
         return queries.getDepositedEuroByDescriptor(
             serialNumber,
             amount,
@@ -69,6 +72,7 @@ class DepositedEuroManager(
             serialize(timestampSignature)!!,
             bankPublicKey.toBytes(),
             serialize(bankKeySignature)!!,
+            serialize(amountSignature)!!,
             digitalEuroMapper
         ).executeAsList()
     }

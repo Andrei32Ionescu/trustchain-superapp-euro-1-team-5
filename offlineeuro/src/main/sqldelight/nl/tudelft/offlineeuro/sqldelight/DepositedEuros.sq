@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS DepositedEuros (
     timestamp           INTEGER NOT NULL,
     timestampSignature  BLOB    NOT NULL,
     bankPublicKey       BLOB    NOT NULL,
-    bankKeySignature    BLOB    NOT NULL
+    bankKeySignature    BLOB    NOT NULL,
+    amountSignature     BLOB    NOT NULL
 );
 
 -- =========================================================
@@ -28,7 +29,8 @@ INSERT INTO DepositedEuros (
     timestamp,
     timestampSignature,
     bankPublicKey,
-    bankKeySignature
+    bankKeySignature,
+    amountSignature
 ) VALUES (
     ?,  -- serialNumber
     ?,  -- amount
@@ -38,7 +40,8 @@ INSERT INTO DepositedEuros (
     ?,  -- timestamp
     ?,  -- timestampSignature
     ?,  -- bankPublicKey
-    ?   -- bankKeySignature
+    ?,  -- bankKeySignature
+    ?   -- amountSignature
 );
 
 -- =========================================================
@@ -54,7 +57,8 @@ WHERE  serialNumber        = ?
   AND  timestamp           = ?
   AND  timestampSignature  = ?
   AND  bankPublicKey       = ?
-  AND  bankKeySignature    = ?;
+  AND  bankKeySignature    = ?
+  AND  amountSignature     = ?;
 
 -- =========================================================
 -- FULL TABLE FETCH & CLEAR

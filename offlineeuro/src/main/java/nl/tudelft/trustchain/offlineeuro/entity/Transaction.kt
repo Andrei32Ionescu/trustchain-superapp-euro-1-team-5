@@ -26,6 +26,7 @@ enum class TransactionResult(val valid: Boolean, val description: String) {
     INVALID_CHAIN_OF_PROOFS(false, "Invalid chaining of proofs"),
     INVALID_PREVIOUS_TRANSACTION_SIGNATURE(false, "Invalid previous transaction signature"),
     INVALID_TIMESTAMP_CHAIN(false, "Invalid timestamp verification chain"),
+    INVALID_AMOUNT(false, "Invalid amount verification")
 }
 
 data class TransactionDetailsBytes(
@@ -130,6 +131,10 @@ object Transaction {
             return TransactionResult.INVALID_TIMESTAMP_CHAIN
         }
 
+        if(!validateAmount(digitalEuro, crs, bilinearGroup)) {
+            return TransactionResult.INVALID_AMOUNT
+        }
+
         // Validate that d2 is constructed correctly
         val usedY = transactionProof.usedY
         val usedVS = transactionProof.usedVS
@@ -190,6 +195,62 @@ object Transaction {
         }
 
         return true
+    }
+
+    fun validateAmount(
+        digitalEuro: DigitalEuro,
+        crs: CRS,
+        bilinearGroup: BilinearGroup
+    ): Boolean {
+        // Verify bank signed the amount
+        val amountVerified = Schnorr.verifySchnorrSignature(
+            digitalEuro.amountSignature,
+            digitalEuro.bankPublicKey,
+            bilinearGroup
+        )
+
+        if (!amountVerified) {
+            Log.d("OfflineEuro", "Bank amount signature is invalid")
+            return false
+        }
+
+//        // Verify the signed amount is currently of the expected value
+//        if (digitalEuro.amount != getValueAfterFee(digitalEuro)) {
+//            Log.d("OfflineEuro", "Bank signed amount is invalid")
+//            throw Exception("BANK AMOUNT MISMATCH:" + digitalEuro.amount + " != " + getValueAfterFee(digitalEuro))
+//            return false
+//        }
+
+        return true
+    }
+
+    fun getValueAfterFee(digitalEuro: DigitalEuro): Long {
+        val fee = calculateTransactionFee(digitalEuro)
+        val left = (String(digitalEuro.amountSignature.signedMessage, Charsets.UTF_8).toFloat() * (1.00-fee)).toLong()
+
+        return left
+    }
+
+    fun calculateTransactionFee(digitalEuro: DigitalEuro): Double {
+        val currentTime = System.currentTimeMillis()
+        val referenceTimestamp = digitalEuro.withdrawalTimestamp
+        val timePassed = (currentTime - referenceTimestamp) / (1000 * 60 * 60)
+
+        val currentTransferCount = calculateTransferCount(digitalEuro)
+
+        var fee = 0.01
+
+        fee += (timePassed / 24) * 0.005
+
+        if (currentTransferCount > 5) {
+            fee += (currentTransferCount - 5) * 0.05
+        }
+
+        return fee
+    }
+
+    fun calculateTransferCount(digitalEuro: DigitalEuro): Int {
+        return digitalEuro.proofs.size
     }
 
     fun validateProofChain(

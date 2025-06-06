@@ -124,7 +124,8 @@ class User(
             response.timestamp,
             response.timestampSignature,
             group.gElementFromBytes(response.bankPublicKey),
-            response.bankKeySignature
+            response.bankKeySignature,
+            response.amountSignature
         )
 
         wallet.addToWallet(digitalEuro, firstT)
