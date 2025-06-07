@@ -187,7 +187,7 @@ class Bank(
         publicKeyBank: Element,
         publicKeySender: Element
     ): String {
-        val transactionResult = Transaction.validate(transactionDetails, publicKeyBank, group, crs)
+        val transactionResult = Transaction.validate(transactionDetails, publicKeyBank, group, crs, isDeposit = true)
         if (transactionResult.valid) {
             val digitalEuro = transactionDetails.digitalEuro
             digitalEuro.proofs.add(transactionDetails.currentTransactionProof.grothSahaiProof)

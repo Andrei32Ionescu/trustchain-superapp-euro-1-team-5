@@ -144,10 +144,9 @@ class User(
         publicKeyBank: Element,
         publicKeySender: Element
     ): String {
-//        onDataChangeCallback?.invoke("ENTERED RECEIVE FUNCTION")
         val usedRandomness = lookUpRandomness(publicKeySender) ?: return "Randomness Not found!"
         removeRandomness(publicKeySender)
-        val transactionResult = Transaction.validate(transactionDetails, publicKeyBank, group, crs)
+        val transactionResult = Transaction.validate(transactionDetails, publicKeyBank, group, crs, isDeposit = false)
         if (transactionResult.valid) {
             wallet.addToWallet(transactionDetails, usedRandomness)
             val amount = transactionDetails.digitalEuro.amount

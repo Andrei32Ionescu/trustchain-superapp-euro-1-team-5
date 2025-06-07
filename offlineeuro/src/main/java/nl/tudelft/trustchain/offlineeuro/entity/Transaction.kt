@@ -104,7 +104,8 @@ object Transaction {
         transaction: TransactionDetails,
         publicKeyBank: Element,
         bilinearGroup: BilinearGroup,
-        crs: CRS
+        crs: CRS,
+        isDeposit: Boolean
     ): TransactionResult {
         // Verify if the Digital euro is signed
         val digitalEuro = transaction.digitalEuro
@@ -131,7 +132,7 @@ object Transaction {
             return TransactionResult.INVALID_TIMESTAMP_CHAIN
         }
 
-        if(!validateAmount(digitalEuro, crs, bilinearGroup)) {
+        if(!validateAmount(digitalEuro, crs, bilinearGroup, isDeposit)) {
             return TransactionResult.INVALID_AMOUNT
         }
 
@@ -200,7 +201,8 @@ object Transaction {
     fun validateAmount(
         digitalEuro: DigitalEuro,
         crs: CRS,
-        bilinearGroup: BilinearGroup
+        bilinearGroup: BilinearGroup,
+        isDeposit: Boolean = false
     ): Boolean {
         // Verify bank signed the amount
         val amountVerified = Schnorr.verifySchnorrSignature(
@@ -214,12 +216,14 @@ object Transaction {
             return false
         }
 
-//        // Verify the signed amount is currently of the expected value
-//        if (digitalEuro.amount != getValueAfterFee(digitalEuro)) {
-//            Log.d("OfflineEuro", "Bank signed amount is invalid")
-//            throw Exception("BANK AMOUNT MISMATCH:" + digitalEuro.amount + " != " + getValueAfterFee(digitalEuro))
-//            return false
-//        }
+        // Only validate amount matching for non-deposits
+        if (!isDeposit) {
+            // Verify the signed amount is currently of the expected value
+            if (digitalEuro.amount != getValueAfterFee(digitalEuro)) {
+                Log.d("OfflineEuro", "Bank amount mismatch: ${digitalEuro.amount} != ${getValueAfterFee(digitalEuro)}")
+                return false
+            }
+        }
 
         return true
     }
@@ -238,12 +242,11 @@ object Transaction {
 
         val currentTransferCount = calculateTransferCount(digitalEuro)
 
-        var fee = 0.01
+        var fee = (timePassed / 24) * 0.005
 
-        fee += (timePassed / 24) * 0.005
-
-        if (currentTransferCount > 5) {
-            fee += (currentTransferCount - 5) * 0.05
+        // No fee for the first 3 transactions
+        if (currentTransferCount > 2) {
+            fee += (currentTransferCount - 2) * 0.05
         }
 
         return fee

@@ -35,12 +35,11 @@ data class WalletEntry(
 
         val currentTransferCount = calculateTransferCount()
 
-        var fee = 0.01
+        var fee = (timePassed / 24) * 0.005
 
-        fee += (timePassed / 24) * 0.005
-
-        if (currentTransferCount > 5) {
-            fee += (currentTransferCount - 5) * 0.05
+        // No fee for the first 3 transactions
+        if (currentTransferCount > 2) {
+            fee += (currentTransferCount - 2) * 0.05
         }
 
         return fee
