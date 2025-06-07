@@ -15,10 +15,14 @@ import nl.tudelft.trustchain.offlineeuro.community.message.BlindSignatureRandomn
 import nl.tudelft.trustchain.offlineeuro.community.message.BlindSignatureRandomnessRequestMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.BlindSignatureReplyMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.BlindSignatureRequestMessage
+import nl.tudelft.trustchain.offlineeuro.community.message.EudiInitiateVerificationMessage
+import nl.tudelft.trustchain.offlineeuro.community.message.EudiVerificationSubmittedMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.FraudControlReplyMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.FraudControlRequestMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.ICommunityMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.MessageList
+import nl.tudelft.trustchain.offlineeuro.community.message.EudiInitiateVerificationReplyMessage
+import nl.tudelft.trustchain.offlineeuro.community.message.EudiVerificationCompletedMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.TTPRegistrationMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.TransactionMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.TransactionRandomizationElementsReplyMessage
@@ -28,7 +32,11 @@ import nl.tudelft.trustchain.offlineeuro.community.payload.AddressPayload
 import nl.tudelft.trustchain.offlineeuro.community.payload.BilinearGroupCRSPayload
 import nl.tudelft.trustchain.offlineeuro.community.payload.BlindSignatureRequestPayload
 import nl.tudelft.trustchain.offlineeuro.community.payload.ByteArrayPayload
+import nl.tudelft.trustchain.offlineeuro.community.payload.EudiInitiateVerificationPayload
+import nl.tudelft.trustchain.offlineeuro.community.payload.EudiVerificationSubmittedPayload
 import nl.tudelft.trustchain.offlineeuro.community.payload.FraudControlRequestPayload
+import nl.tudelft.trustchain.offlineeuro.community.payload.EudiInitiateVerificationReplyPayload
+import nl.tudelft.trustchain.offlineeuro.community.payload.EudiVerificationCompletedPayload
 import nl.tudelft.trustchain.offlineeuro.community.payload.TTPRegistrationPayload
 import nl.tudelft.trustchain.offlineeuro.community.payload.TransactionDetailsPayload
 import nl.tudelft.trustchain.offlineeuro.community.payload.TransactionRandomizationElementsPayload
@@ -59,6 +67,11 @@ object MessageID {
 
     const val FRAUD_CONTROL_REQUEST = 22
     const val FRAUD_CONTROL_REPLY = 23
+
+    const val INITIATE_VERIFICATION = 24
+    const val INITIATE_VERIFICATION_REPLY = 25
+    const val EUDI_VERIFICATION_SUBMITTED_MESSAGE = 26
+    const val EUDI_VERIFICATION_COMPLETED_MESSAGE = 27
 }
 
 class OfflineEuroCommunity(
@@ -94,6 +107,98 @@ class OfflineEuroCommunity(
 
         messageHandlers[MessageID.FRAUD_CONTROL_REQUEST] = ::onFraudControlRequestPacket
         messageHandlers[MessageID.FRAUD_CONTROL_REPLY] = ::onFraudControlReplyPacket
+
+        messageHandlers[MessageID.INITIATE_VERIFICATION] = ::onInitiateVerificationPacket
+        messageHandlers[MessageID.INITIATE_VERIFICATION_REPLY] = ::onInitiateVerificationReplyPacket
+        messageHandlers[MessageID.EUDI_VERIFICATION_SUBMITTED_MESSAGE] = ::onEudiVerificationSubmittedPacket
+        messageHandlers[MessageID.EUDI_VERIFICATION_COMPLETED_MESSAGE] = ::onEudiVerificationCompletedPacket
+    }
+
+    fun onInitiateVerificationPacket(packet: Packet) {
+        val (_, payload) = packet.getAuthPayload(EudiInitiateVerificationPayload)
+        val message = EudiInitiateVerificationMessage(payload.userName, payload.publicKey)
+        addMessage(message)
+    }
+
+    // send to TTP
+    fun sendInitiateVerificationMessage(
+        userName: String,
+        publicKey: ByteArray,
+        peer: Peer
+    ) {
+        val initiateVerificationPacket =
+            serializePacket(
+                MessageID.INITIATE_VERIFICATION,
+                EudiInitiateVerificationPayload(userName, publicKey)
+            )
+
+        send(peer, initiateVerificationPacket)
+    }
+
+    fun onInitiateVerificationReplyPacket(packet: Packet) {
+        val (_, payload) = packet.getAuthPayload(EudiInitiateVerificationReplyPayload)
+        val message = EudiInitiateVerificationReplyMessage(payload.transactionId, payload.requestURI, payload.requestURIMethod, payload.clientId)
+        addMessage(message)
+    }
+
+    fun sendInitiateVerificationReplyMessage(
+        transactionId: String,
+        requestURI: String,
+        requestURIMethod: String,
+        clientId: String,
+        userPK: ByteArray
+    ) {
+        val peer = getPeerByPublicKeyBytes(userPK) ?: throw Exception("Initiated Verification: User not found (this error shouldn't happen i think)")
+
+        val initiateVerificationReplyPacket =
+            serializePacket(
+                MessageID.INITIATE_VERIFICATION_REPLY,
+                EudiInitiateVerificationReplyPayload(transactionId, requestURI, requestURIMethod, clientId)
+            )
+
+        send(peer, initiateVerificationReplyPacket)
+    }
+
+    fun onEudiVerificationSubmittedPacket(packet: Packet) {
+        val (_, payload) = packet.getAuthPayload(EudiVerificationSubmittedPayload)
+        val message = EudiVerificationSubmittedMessage(payload.transactionId, payload.clientId, payload.userName, payload.publicKey)
+        addMessage(message)
+    }
+
+    fun sendEudiVerificationSubmittedMessage(
+        transactionId: String,
+        clientId: String,
+        userName: String,
+        publicKey: ByteArray,
+        peer: Peer
+    ) {
+        val eudiVerificationSubmittedPacket =
+            serializePacket(
+                MessageID.EUDI_VERIFICATION_SUBMITTED_MESSAGE,
+                EudiVerificationSubmittedPayload(transactionId, clientId, userName, publicKey)
+            )
+
+        send(peer, eudiVerificationSubmittedPacket)
+    }
+
+    fun onEudiVerificationCompletedPacket(packet: Packet) {
+        val (_, payload) = packet.getAuthPayload(EudiVerificationCompletedPayload)
+        val message = EudiVerificationCompletedMessage(payload.status)
+        addMessage(message)
+    }
+
+    fun sendEudiVerificationCompletedMessage(
+        status: String,
+        userPK: ByteArray
+    ) {
+        val peer = getPeerByPublicKeyBytes(userPK) ?: throw Exception("Completed Verification: User not found (this error shouldn't happen i think)")
+        val eudiVerificationCompletedPacket =
+            serializePacket(
+                MessageID.EUDI_VERIFICATION_COMPLETED_MESSAGE,
+                EudiVerificationCompletedPayload(status)
+            )
+
+        send(peer, eudiVerificationCompletedPacket)
     }
 
     fun getGroupDescriptionAndCRS() {
@@ -165,7 +270,7 @@ class OfflineEuroCommunity(
                 TTPRegistrationPayload(
                     name,
                     myPublicKeyBytes,
-                    legalName
+//                    legalName
                 )
             )
 
@@ -183,14 +288,14 @@ class OfflineEuroCommunity(
     ) {
         val senderPKBytes = peer.publicKey.keyToBin()
         val userName = payload.userName
-        val legalName = payload.legalName
+//        val legalName = payload.legalName
         val userPKBytes = payload.publicKey
 
         val message =
             TTPRegistrationMessage(
                 userName,
                 userPKBytes,
-                legalName,
+//                legalName,
                 senderPKBytes
             )
 

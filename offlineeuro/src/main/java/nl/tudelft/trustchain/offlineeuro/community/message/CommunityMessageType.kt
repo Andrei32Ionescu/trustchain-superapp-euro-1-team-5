@@ -25,4 +25,9 @@ enum class CommunityMessageType {
 
     FraudControlRequestMessage,
     FraudControlReplyMessage,
+
+    EudiInitiateVerificationMessage, // user sends verification request to TTP
+    EudiInitiateVerificationReplyMessage, // TTP sends txId, reqURI, reqURIMethod, clientId to User
+    EudiVerificationSubmittedMessage, // User sends txId to TTP
+    EudiVerificationCompletedMessage, // TTP sends back success/failure to User
 }

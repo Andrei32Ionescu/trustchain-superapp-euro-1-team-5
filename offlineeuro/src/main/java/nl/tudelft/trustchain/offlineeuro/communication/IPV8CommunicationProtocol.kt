@@ -11,10 +11,14 @@ import nl.tudelft.trustchain.offlineeuro.community.message.BlindSignatureRandomn
 import nl.tudelft.trustchain.offlineeuro.community.message.BlindSignatureReplyMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.BlindSignatureRequestMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.CommunityMessageType
+import nl.tudelft.trustchain.offlineeuro.community.message.EudiInitiateVerificationMessage
+import nl.tudelft.trustchain.offlineeuro.community.message.EudiVerificationSubmittedMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.FraudControlReplyMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.FraudControlRequestMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.ICommunityMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.MessageList
+import nl.tudelft.trustchain.offlineeuro.community.message.EudiInitiateVerificationReplyMessage
+import nl.tudelft.trustchain.offlineeuro.community.message.EudiVerificationCompletedMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.TTPRegistrationMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.TransactionMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.TransactionRandomizationElementsReplyMessage
@@ -67,6 +71,8 @@ class IPV8CommunicationProtocol(
     ) {
         val ttpAddress = addressBookManager.getAddressByName(nameTTP)
         community.registerAtTTP(userName, publicKey.toBytes(), legalName, ttpAddress.peerPublicKey!!)
+//        val message =
+//            waitForMessage(CommunityMessageType.RegistrationReplyMessage)
     }
 
     override fun getBlindSignatureRandomness(
@@ -240,10 +246,76 @@ class IPV8CommunicationProtocol(
         if (participant !is TTP) {
             return
         }
-
         val ttp = participant as TTP
         val publicKey = ttp.group.gElementFromBytes(message.userPKBytes)
-        ttp.registerUser(message.userName, publicKey, message.legalName)
+        ttp.registerUser(message.userName, publicKey/*,message.legalName*/)
+//        val map = ttp.getEUDI()
+    }
+
+    private fun handleInitiateVerificationMessage(message: EudiInitiateVerificationMessage) {
+        if (participant !is TTP) {
+            return
+        }
+
+        val ttp = participant as TTP
+        val userName = message.userName
+        val userPK = message.publicKey
+
+        val map = ttp.getEUDI()
+
+        community.sendInitiateVerificationReplyMessage(map["transaction_id"]!!, map["request_uri"]!!, map["request_uri_method"]!!, map["client_id"]!!, userPK)
+    }
+
+    // received by user
+    private fun handleInitiateVerificationReplyMessage(message: EudiInitiateVerificationReplyMessage) {
+        if (participant !is User) {
+            return
+        }
+
+        val user = participant as User
+
+        // open wallet, share data, and after this, send to TTP a EudiVerificationSubmittedMessage
+        val clientId = message.clientId
+        val requestURI = message.requestURI
+        val requestURIMethod = message.requestURIMethod
+        val deeplink = "eudi-openid4vp://?client_id=$clientId&request_uri=$requestURI&request_uri_method=$requestURIMethod"
+
+        // TODO: use deeplink on client (user) side to share user data
+    }
+
+    // received by TTP after user shares data from wallet
+    private fun handleVerificationSubmitted(message: EudiVerificationSubmittedMessage) {
+        // TODO: check user's data
+        if (participant !is TTP) {
+            return
+        }
+
+        // not sure how many of these exactly will be needed
+        val ttp = participant as TTP
+        val txId = message.transactionId
+        val clientId = message.clientId
+        val userName = message.userName
+        val userPK = message.publicKey
+        // verify transaction id
+        val vpToken = ttp.getVPToken(txId)
+        var status = ""
+        if (vpToken == null)
+            status = "fail"
+        else
+            status = "success"
+        // finally do:
+
+        community.sendEudiVerificationCompletedMessage(status, userPK)
+    }
+
+    // received by user
+    private fun handleVerificationCompleted(message: EudiVerificationCompletedMessage) {
+        // TODO: if success, user verified, otherwise, user not verified
+        if (participant !is User) {
+            return
+        }
+
+        // do user stuff based on status
     }
 
     private fun handleAddressRequestMessage(message: AddressRequestMessage) {
@@ -273,6 +345,12 @@ class IPV8CommunicationProtocol(
             is TransactionRandomizationElementsRequestMessage -> handleTransactionRandomizationElementsRequest(message)
             is TransactionMessage -> handleTransactionMessage(message)
             is TTPRegistrationMessage -> handleRegistrationMessage(message)
+            // NEW
+            is EudiInitiateVerificationMessage -> handleInitiateVerificationMessage(message)
+            is EudiInitiateVerificationReplyMessage -> handleInitiateVerificationReplyMessage(message)
+            is EudiVerificationSubmittedMessage -> handleVerificationSubmitted(message)
+            is EudiVerificationCompletedMessage -> handleVerificationCompleted(message)
+
             is FraudControlRequestMessage -> handleFraudControlRequestMessage(message)
             else -> throw Exception("Unsupported message type")
         }

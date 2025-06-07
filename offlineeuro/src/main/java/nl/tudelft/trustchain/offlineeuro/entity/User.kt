@@ -1,30 +1,12 @@
 package nl.tudelft.trustchain.offlineeuro.entity
 
 import android.content.Context
-import android.content.Intent
-import android.util.Log
-import androidx.core.net.toUri
 import it.unisa.dia.gas.jpbc.Element
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import nl.tudelft.trustchain.offlineeuro.communication.ICommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.cryptography.BilinearGroup
 import nl.tudelft.trustchain.offlineeuro.cryptography.Schnorr
 import nl.tudelft.trustchain.offlineeuro.db.WalletManager
-import okhttp3.MediaType
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONArray
-import org.json.JSONException
-import org.json.JSONObject
-import java.io.IOException
 import java.util.UUID
-
-import kotlinx.coroutines.*
-import okhttp3.*
 
 class User(
     name: String,
@@ -37,8 +19,6 @@ class User(
     legalName: String? = "",
 ) : Participant(communicationProtocol, name, onDataChangeCallback) {
     val wallet: Wallet
-
-
 
     init {
         communicationProtocol.participant = this
