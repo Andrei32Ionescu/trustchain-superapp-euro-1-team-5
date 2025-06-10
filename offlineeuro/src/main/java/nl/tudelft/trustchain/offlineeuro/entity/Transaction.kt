@@ -177,21 +177,21 @@ object Transaction {
             return false
         }
 
-        // Verify bank signed the timestamp
-        val timestampVerified = Schnorr.verifySchnorrSignature(
-            digitalEuro.timestampSignature,
+        // Verify bank signed the hash
+        val hashVerified = Schnorr.verifySchnorrSignature(
+            digitalEuro.hashSignature,
             digitalEuro.bankPublicKey,
             bilinearGroup
         )
-        if (!timestampVerified) {
-            Log.d("OfflineEuro", "Bank timestamp signature is invalid")
+        if (!hashVerified) {
+            Log.d("OfflineEuro", "Bank hash signature is invalid")
             return false
         }
 
-        // Verify the signed message is the actual timestamp
-        val expectedTimestampBytes = digitalEuro.withdrawalTimestamp.toString().toByteArray()
-        if (!digitalEuro.timestampSignature.signedMessage.contentEquals(expectedTimestampBytes)) {
-            Log.d("OfflineEuro", "Bank timestamp is invalid")
+        // Verify the signed message is the actual hash
+        val expectedHash = "${digitalEuro.serialNumber} | ${String(digitalEuro.amountSignature.signedMessage, Charsets.UTF_8)} | ${digitalEuro.withdrawalTimestamp}".hashCode()
+        if (String(digitalEuro.hashSignature.signedMessage, Charsets.UTF_8).toInt() != expectedHash) {
+            Log.d("OfflineEuro", "Bank hash is invalid")
             return false
         }
 

@@ -24,7 +24,7 @@ class TransactionDetailsPayload(
         payload += serializeVarLen(digitalEuroBytes.signatureBytes)
         payload += serializeVarLen(digitalEuroBytes.proofsBytes)
         payload += serializeVarLen(digitalEuroBytes.withdrawalTimestampBytes)
-        payload += serializeVarLen(digitalEuroBytes.timestampSignatureBytes)
+        payload += serializeVarLen(digitalEuroBytes.hashSignatureBytes)
         payload += serializeVarLen(digitalEuroBytes.bankPublicKeyBytes)
         payload += serializeVarLen(digitalEuroBytes.bankKeySignatureBytes)
         payload += serializeVarLen(digitalEuroBytes.amountSignatureBytes)
@@ -72,8 +72,8 @@ class TransactionDetailsPayload(
             val (withdrawalTimestampBytes, withdrawalTimestampSize) = deserializeVarLen(buffer, localOffset)
             localOffset += withdrawalTimestampSize
 
-            val (timestampSignatureBytes, timestampSignatureSize) = deserializeVarLen(buffer, localOffset)
-            localOffset += timestampSignatureSize
+            val (hashBytes, hashSignatureSize) = deserializeVarLen(buffer, localOffset)
+            localOffset += hashSignatureSize
 
             val (bankPublicKeyBytes, bankPublicKeySize) = deserializeVarLen(buffer, localOffset)
             localOffset += bankPublicKeySize
@@ -112,7 +112,7 @@ class TransactionDetailsPayload(
             localOffset += spenderPublicKeySize
 
             val digitalEuroBytes =
-                DigitalEuroBytes(serialNumberBytes, amountBytes,firstTheta1Bytes, signatureBytes, proofBytes, withdrawalTimestampBytes, timestampSignatureBytes, bankPublicKeyBytes, bankKeySignatureBytes, amountSignatureBytes)
+                DigitalEuroBytes(serialNumberBytes, amountBytes,firstTheta1Bytes, signatureBytes, proofBytes, withdrawalTimestampBytes, hashBytes, bankPublicKeyBytes, bankKeySignatureBytes, amountSignatureBytes)
             val transactionProofBytes =
                 TransactionProofBytes(grothSahaiProofBytes, usedYBytes, usedVSBytes)
 

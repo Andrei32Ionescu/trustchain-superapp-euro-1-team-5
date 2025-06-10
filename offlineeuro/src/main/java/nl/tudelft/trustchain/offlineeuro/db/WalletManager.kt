@@ -26,7 +26,7 @@ class WalletManager(
             transactionSignature: ByteArray?,
             timesSpent: Long,
             timestamp: Long,
-            timestampSignature: ByteArray,
+            hashSignature: ByteArray,
             bankPublicKey: ByteArray,
             bankKeySignature: ByteArray,
             amountSignature: ByteArray
@@ -39,7 +39,7 @@ class WalletManager(
                 deserializeSchnorr(signature)!!,
                 deserializeGSP(previousProofs),
                 timestamp,
-                deserializeSchnorr(timestampSignature)!!,
+                deserializeSchnorr(hashSignature)!!,
                 group.gElementFromBytes(bankPublicKey),
                 deserializeSchnorr(bankKeySignature)!!,
                 deserializeSchnorr(amountSignature)!!
@@ -77,7 +77,7 @@ class WalletManager(
             walletEntry.t.toBytes(),
             serialize(walletEntry.transactionSignature),
             digitalEuro.withdrawalTimestamp,
-            serialize(digitalEuro.timestampSignature)!!,
+            serialize(digitalEuro.hashSignature)!!,
             digitalEuro.bankPublicKey.toBytes(),
             serialize(digitalEuro.bankKeySignature)!!,
             serialize(digitalEuro.amountSignature)!!

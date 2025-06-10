@@ -15,7 +15,7 @@ interface ICommunicationProtocol {
     data class BlindSignatureResponse(
         val signature: BigInteger,
         val timestamp: Long,
-        val timestampSignature: SchnorrSignature,
+        val hashSignature: SchnorrSignature,
         val bankPublicKey: ByteArray,
         val bankKeySignature: SchnorrSignature,
         val amountSignature: SchnorrSignature
@@ -40,7 +40,8 @@ interface ICommunicationProtocol {
         publicKey: Element,
         bankName: String,
         challenge: BigInteger,
-        amount: Long
+        amount: Long,
+        serialNumber: String
     ): BlindSignatureResponse
 
     fun requestTransactionRandomness(

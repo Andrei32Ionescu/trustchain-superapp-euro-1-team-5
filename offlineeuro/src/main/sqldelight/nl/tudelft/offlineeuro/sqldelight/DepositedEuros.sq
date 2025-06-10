@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS DepositedEuros (
     signature           BLOB    NOT NULL,
     proofs              BLOB,               -- optional
     timestamp           INTEGER NOT NULL,
-    timestampSignature  BLOB    NOT NULL,
+    hashSignature  BLOB    NOT NULL,
     bankPublicKey       BLOB    NOT NULL,
     bankKeySignature    BLOB    NOT NULL,
     amountSignature     BLOB    NOT NULL
@@ -27,7 +27,7 @@ INSERT INTO DepositedEuros (
     signature,
     proofs,
     timestamp,
-    timestampSignature,
+    hashSignature,
     bankPublicKey,
     bankKeySignature,
     amountSignature
@@ -38,7 +38,7 @@ INSERT INTO DepositedEuros (
     ?,  -- signature
     ?,  -- proofs
     ?,  -- timestamp
-    ?,  -- timestampSignature
+    ?,  -- hashSignature
     ?,  -- bankPublicKey
     ?,  -- bankKeySignature
     ?   -- amountSignature
@@ -55,7 +55,7 @@ WHERE  serialNumber        = ?
   AND  firstTheta1         = ?
   AND  signature           = ?
   AND  timestamp           = ?
-  AND  timestampSignature  = ?
+  AND  hashSignature       = ?
   AND  bankPublicKey       = ?
   AND  bankKeySignature    = ?
   AND  amountSignature     = ?;

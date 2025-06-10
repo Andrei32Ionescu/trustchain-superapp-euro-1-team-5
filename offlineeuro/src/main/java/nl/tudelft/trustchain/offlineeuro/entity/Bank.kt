@@ -56,7 +56,8 @@ class Bank(
     fun createBlindSignature(
         challenge: BigInteger,
         userPublicKey: Element,
-        amount: Long
+        amount: Long,
+        serialNumber: String
     ): ICommunicationProtocol.BlindSignatureResponse {  // Return signature and metadata
         val k = lookUp(userPublicKey) ?: return ICommunicationProtocol.BlindSignatureResponse(BigInteger.ZERO,3,SchnorrSignature(BigInteger.ZERO, BigInteger.ZERO, ByteArray(0)), userPublicKey.toBytes(), SchnorrSignature(BigInteger.ZERO, BigInteger.ZERO, ByteArray(0)),SchnorrSignature(BigInteger.ZERO, BigInteger.ZERO, ByteArray(0)))
         remove(userPublicKey)
@@ -64,17 +65,18 @@ class Bank(
         // Create timestamp
         val timestamp = System.currentTimeMillis()
 
-        // Sign the timestamp with bank's private key
-        val timestampSignature = Schnorr.schnorrSignature(
-            privateKey,
-            timestamp.toString().toByteArray(),
-            group
-        )
-
         // Sign the initial amount with bank's private key
         val amountSignature = Schnorr.schnorrSignature(
             privateKey,
             amount.toString().toByteArray(Charsets.UTF_8),
+            group
+        )
+
+        // Sign the hash with bank's private key
+        val hashString = "$serialNumber | $amount | $timestamp"
+        val hashSignature = Schnorr.schnorrSignature(
+            privateKey,
+            hashString.hashCode().toString().toByteArray(Charsets.UTF_8),
             group
         )
 
@@ -84,7 +86,7 @@ class Bank(
 
         onDataChangeCallback?.invoke("A token of €${amount.toFloat()/100.0} was withdrawn by $userPublicKey")
 
-        return ICommunicationProtocol.BlindSignatureResponse(blindSignature, timestamp, timestampSignature, bankPk.toBytes(), ttpSignatureOnPublicKey!!, amountSignature)
+        return ICommunicationProtocol.BlindSignatureResponse(blindSignature, timestamp, hashSignature, bankPk.toBytes(), ttpSignatureOnPublicKey!!, amountSignature)
     }
 
     fun getWithdrawalMetadata(): Pair<Element, SchnorrSignature> {

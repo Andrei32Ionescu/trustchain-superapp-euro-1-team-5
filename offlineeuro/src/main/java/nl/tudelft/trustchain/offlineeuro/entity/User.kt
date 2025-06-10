@@ -110,7 +110,8 @@ class User(
             publicKey,
             bank,
             blindedChallenge.blindedChallenge,
-            amount
+            amount,
+            serialNumber
         )
 
         val signature = Schnorr.unblindSignature(blindedChallenge, response.signature)
@@ -122,7 +123,7 @@ class User(
             signature,
             arrayListOf(),
             response.timestamp,
-            response.timestampSignature,
+            response.hashSignature,
             group.gElementFromBytes(response.bankPublicKey),
             response.bankKeySignature,
             response.amountSignature

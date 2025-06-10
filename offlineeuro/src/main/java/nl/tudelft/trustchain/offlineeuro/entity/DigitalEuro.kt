@@ -24,7 +24,7 @@ data class DigitalEuroBytes(
     val signatureBytes: ByteArray,
     val proofsBytes: ByteArray,
     val withdrawalTimestampBytes: ByteArray,
-    val timestampSignatureBytes: ByteArray,
+    val hashSignatureBytes: ByteArray,
     val bankPublicKeyBytes: ByteArray,
     val bankKeySignatureBytes: ByteArray,
     val amountSignatureBytes: ByteArray
@@ -38,7 +38,7 @@ data class DigitalEuroBytes(
             SchnorrSignatureSerializer.deserializeSchnorrSignatureBytes(signatureBytes)!!,
             GrothSahaiSerializer.deserializeProofListBytes(proofsBytes, group),
             withdrawalTimestampBytes.toString(Charsets.UTF_8).toLong(),
-            timestampSignatureBytes.let { SchnorrSignatureSerializer.deserializeSchnorrSignatureBytes(it)!! },
+            hashSignatureBytes.let { SchnorrSignatureSerializer.deserializeSchnorrSignatureBytes(it)!! },
             bankPublicKeyBytes.let { group.gElementFromBytes(it) },
             bankKeySignatureBytes.let { SchnorrSignatureSerializer.deserializeSchnorrSignatureBytes(it)!! },
             amountSignatureBytes.let {SchnorrSignatureSerializer.deserializeSchnorrSignatureBytes(it)!!}
@@ -53,7 +53,7 @@ data class DigitalEuro(
     val signature: SchnorrSignature,
     val proofs: ArrayList<GrothSahaiProof> = arrayListOf(),
     val withdrawalTimestamp: Long,
-    val timestampSignature: SchnorrSignature,
+    val hashSignature: SchnorrSignature,
     val bankPublicKey: Element,
     val bankKeySignature: SchnorrSignature,
     val amountSignature: SchnorrSignature
@@ -109,7 +109,7 @@ data class DigitalEuro(
             SchnorrSignatureSerializer.serializeSchnorrSignature(signature),
             proofBytes ?: ByteArray(0),
             withdrawalTimestamp.toString().toByteArray(),
-            timestampSignature.let { SchnorrSignatureSerializer.serializeSchnorrSignature(it) },
+            hashSignature.let { SchnorrSignatureSerializer.serializeSchnorrSignature(it) },
             bankPublicKey.toBytes(),
             bankKeySignature.let { SchnorrSignatureSerializer.serializeSchnorrSignature(it) },
             amountSignature.let { SchnorrSignatureSerializer.serializeSchnorrSignature(it) }

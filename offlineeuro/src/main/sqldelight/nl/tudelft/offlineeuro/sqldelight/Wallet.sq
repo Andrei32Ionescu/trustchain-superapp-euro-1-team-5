@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS Wallet (
     transactionSignature BLOB,
     timesSpent INTEGER NOT NULL,
     timestamp INTEGER NOT NULL,
-    timestampSignature BLOB NOT NULL,
+    hashSignature BLOB NOT NULL,
     bankPublicKey BLOB NOT NULL,
     bankKeySignature BLOB NOT NULL,
     amountSignature BLOB NOT NULL
@@ -26,7 +26,7 @@ INSERT INTO Wallet(
     transactionSignature,
     timesSpent,
     timestamp,
-    timestampSignature,
+    hashSignature,
     bankPublicKey,
     bankKeySignature,
     amountSignature

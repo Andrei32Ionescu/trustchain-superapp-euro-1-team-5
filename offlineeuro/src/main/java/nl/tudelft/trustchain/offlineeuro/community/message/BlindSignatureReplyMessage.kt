@@ -7,7 +7,7 @@ import java.math.BigInteger
 class BlindSignatureReplyMessage(
     val signature: BigInteger,
     val timestamp: Long,
-    val timestampSignature: SchnorrSignature,
+    val hashSignature: SchnorrSignature,
     val bankPublicKey: ByteArray,
     val bankKeySignature: SchnorrSignature,
     val amountSignature: SchnorrSignature

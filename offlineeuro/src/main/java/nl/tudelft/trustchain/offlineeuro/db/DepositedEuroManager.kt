@@ -21,7 +21,7 @@ class DepositedEuroManager(
             signature: ByteArray,
             previousProofs: ByteArray?,
             timestamp: Long,
-            timestampSignature: ByteArray,
+            hashSignature: ByteArray,
             bankPublicKey: ByteArray,
             bankKeySignature: ByteArray,
             amountSignature: ByteArray
@@ -33,7 +33,7 @@ class DepositedEuroManager(
             deserializeSchnorr(signature)!!,
             deserializeGSP(previousProofs),
             timestamp,
-            deserializeSchnorr(timestampSignature)!!,
+            deserializeSchnorr(hashSignature)!!,
             group.gElementFromBytes(bankPublicKey),
             deserializeSchnorr(bankKeySignature)!!,
             deserializeSchnorr(amountSignature)!!
@@ -46,7 +46,7 @@ class DepositedEuroManager(
     }
 
     fun insertDigitalEuro(digitalEuro: DigitalEuro) {
-        val (serialNumber, amount,firstTheta1, signature, proofs, timestamp, timestampSignature, bankPublicKey, bankKeySignature, amountSignature) = digitalEuro
+        val (serialNumber, amount,firstTheta1, signature, proofs, timestamp, hashSignature, bankPublicKey, bankKeySignature, amountSignature) = digitalEuro
         queries.insertDepositedEuro(
             serialNumber,
             amount,
@@ -54,7 +54,7 @@ class DepositedEuroManager(
             serialize(signature)!!,
             serialize(proofs),
             timestamp,
-            serialize(timestampSignature)!!,
+            serialize(hashSignature)!!,
             bankPublicKey.toBytes(),
             serialize(bankKeySignature)!!,
             serialize(amountSignature)!!
@@ -62,14 +62,14 @@ class DepositedEuroManager(
     }
 
     fun getDigitalEurosByDescriptor(digitalEuro: DigitalEuro): List<DigitalEuro> {
-        val (serialNumber,amount, firstTheta1, signature, _, timestamp, timestampSignature, bankPublicKey, bankKeySignature, amountSignature) = digitalEuro
+        val (serialNumber,amount, firstTheta1, signature, _, timestamp, hashSignature, bankPublicKey, bankKeySignature, amountSignature) = digitalEuro
         return queries.getDepositedEuroByDescriptor(
             serialNumber,
             amount,
             firstTheta1.toBytes(),
             serialize(signature)!!,
             timestamp,
-            serialize(timestampSignature)!!,
+            serialize(hashSignature)!!,
             bankPublicKey.toBytes(),
             serialize(bankKeySignature)!!,
             serialize(amountSignature)!!,

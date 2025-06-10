@@ -268,8 +268,8 @@ class OfflineEuroCommunity(
         challenge: BigInteger,
         publicKeyBytes: ByteArray,
         bankPublicKeyBytes: ByteArray,
-        amount: Long
-
+        amount: Long,
+        serialNumber: String
     ) {
         val bankPeer = getPeerByPublicKeyBytes(bankPublicKeyBytes)
 
@@ -280,7 +280,8 @@ class OfflineEuroCommunity(
                 BlindSignatureRequestPayload(
                     challenge,
                     publicKeyBytes,
-                    amount
+                    amount,
+                    serialNumber
                 )
             )
 
@@ -301,6 +302,7 @@ class OfflineEuroCommunity(
                 payload.challenge,
                 payload.publicKeyBytes,
                 payload.amount,
+                payload.serialNumber,
                 requestingPeer
             )
         addMessage(message)
@@ -313,7 +315,7 @@ class OfflineEuroCommunity(
         val sigBytes          = signature.signature.toByteArray()
         val tsBytes           = ByteBuffer.allocate(Long.SIZE_BYTES)
             .putLong(signature.timestamp).array()
-        val sigTimeBytes      = signature.timestampSignature.toBytes()
+        val sigHashBytes      = signature.hashSignature.toBytes()
         val sigPkBytes        = signature.bankKeySignature.toBytes()
         val bankPkBytes       = signature.bankPublicKey
         val sigAmtBytes       = signature.amountSignature.toBytes()
@@ -321,7 +323,7 @@ class OfflineEuroCommunity(
         val totalSize =
             4 + sigBytes.size +                       // sig length + data
                 tsBytes.size +                            // timestamp (8 B)
-                4 + sigTimeBytes.size +                   // Schnorr time-sig
+                4 + sigHashBytes.size +                   // Schnorr hash-sig
                 4 + sigPkBytes.size +                     // Schnorr pk-sig
                 4 + bankPkBytes.size +                    // bank PK
                 4 + sigAmtBytes.size                      // Schnorr amt-sig
@@ -331,7 +333,7 @@ class OfflineEuroCommunity(
 
         buf.putInt(sigBytes.size) ; buf.put(sigBytes)
         buf.put(tsBytes)
-        buf.putInt(sigTimeBytes.size) ; buf.put(sigTimeBytes)
+        buf.putInt(sigHashBytes.size) ; buf.put(sigHashBytes)
         buf.putInt(sigPkBytes.size)   ; buf.put(sigPkBytes)
         buf.putInt(bankPkBytes.size)  ; buf.put(bankPkBytes)
         buf.putInt(sigAmtBytes.size)  ; buf.put(sigAmtBytes)
@@ -361,9 +363,9 @@ class OfflineEuroCommunity(
 
         val timestamp = buf.long
 
-        val sigTimeLen   = buf.int
-        val sigTimeBytes = ByteArray(sigTimeLen).also { buf.get(it) }
-        val timestampSignature = SchnorrSignature.fromBytes(sigTimeBytes)
+        val sigHashLen   = buf.int
+        val sigHashBytes = ByteArray(sigHashLen).also { buf.get(it) }
+        val hashSignature = SchnorrSignature.fromBytes(sigHashBytes)
 
         val sigPkLen   = buf.int
         val sigPkBytes = ByteArray(sigPkLen).also { buf.get(it) }
@@ -379,7 +381,7 @@ class OfflineEuroCommunity(
         val msg = BlindSignatureReplyMessage(
             signature,
             timestamp,
-            timestampSignature,
+            hashSignature,
             bankPkBytes,
             bankKeySignature,
             amountSignature

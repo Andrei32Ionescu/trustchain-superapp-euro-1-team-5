@@ -99,13 +99,14 @@ class IPV8CommunicationProtocol(
         publicKey: Element,
         bankName: String,
         challenge: BigInteger,
-        amount: Long
+        amount: Long,
+        serialNumber: String
     ): ICommunicationProtocol.BlindSignatureResponse {
         val bankAddress = addressBookManager.getAddressByName(bankName)
-        community.getBlindSignature(challenge, publicKey.toBytes(), bankAddress.peerPublicKey!!, amount)
+        community.getBlindSignature(challenge, publicKey.toBytes(), bankAddress.peerPublicKey!!, amount, serialNumber)
 
         val replyMessage = waitForMessage(CommunityMessageType.BlindSignatureReplyMessage) as BlindSignatureReplyMessage
-        val newResponse = ICommunicationProtocol.BlindSignatureResponse(replyMessage.signature, replyMessage.timestamp, replyMessage.timestampSignature, replyMessage.bankPublicKey, replyMessage.bankKeySignature, replyMessage.amountSignature)
+        val newResponse = ICommunicationProtocol.BlindSignatureResponse(replyMessage.signature, replyMessage.timestamp, replyMessage.hashSignature, replyMessage.bankPublicKey, replyMessage.bankKeySignature, replyMessage.amountSignature)
         return newResponse
     }
 
@@ -222,8 +223,9 @@ class IPV8CommunicationProtocol(
         val publicKey = bank.group.gElementFromBytes(message.publicKeyBytes)
         val challenge = message.challenge
         val amount = message.amount
+        val serialNumber = message.serialNumber
 
-        val blindSignatureResponse = bank.createBlindSignature(challenge, publicKey,amount)
+        val blindSignatureResponse = bank.createBlindSignature(challenge, publicKey, amount, serialNumber)
 
         val requestingPeer = message.peer
         community.sendBlindSignature(blindSignatureResponse, requestingPeer)
