@@ -279,12 +279,15 @@ class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
 
         if (shouldNavigateOnResume && eudiFinished) {
             shouldNavigateOnResume = false
+            Log.d("EUDI", "moving to user home")
             moveToUserHome()
         }
     }
 
     private val onRegister: () -> Unit = {
+        Log.d("EUDI","on register")
         eudiFinished = true;
+        moveToUserHome()
     }
 
     private fun createUser() {
@@ -294,7 +297,7 @@ class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
         val addressBookManager = AddressBookManager(context, group)
         communicationProtocol = IPV8CommunicationProtocol(addressBookManager, community)
         try {
-            user = User(userName, group, context, null, communicationProtocol, onDataChangeCallback = onUserDataChangeCallBack, onRegister=onRegister, transactionId=transactionId)
+            user = User(userName, group, context, null, communicationProtocol, onRegister=onRegister, transactionId=transactionId)
             communicationProtocol.scopePeers()
             val addresses = communicationProtocol.addressBookManager.getAllAddresses()
             Log.d("EUDI", "$addresses")
@@ -307,26 +310,12 @@ class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
 
     private fun moveToUserHome() {
         if (isAdded && !requireActivity().isFinishing) {
+            Log.d("EUDI", "moving...")
             try {
                 ParticipantHolder.user = user
                 findNavController().navigate(R.id.nav_home_userhome, null)
             } catch (e: Exception) {
                 Log.e("Navigation", "Failed to navigate", e)
-            }
-        }
-    }
-
-    private val onUserDataChangeCallBack: (String?) -> Unit = { message ->
-        requireActivity().runOnUiThread {
-            val context = requireContext()
-            if (this::user.isInitialized) {
-                CallbackLibrary.userCallback(
-                    context,
-                    message,
-                    requireView(),
-                    communicationProtocol,
-                    user
-                )
             }
         }
     }

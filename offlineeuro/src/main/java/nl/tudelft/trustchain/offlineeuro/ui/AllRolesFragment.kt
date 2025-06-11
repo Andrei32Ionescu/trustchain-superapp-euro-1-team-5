@@ -74,8 +74,8 @@ class AllRolesFragment : OfflineEuroBaseFragment(R.layout.fragment_all_roles_hom
 
         iPV8CommunicationProtocol.participant = ttp
 
-        ttp.registerUser(user.name, user.publicKey, "")
-        ttp.registerUser(bank.name, bank.publicKey, "", )
+        ttp.registerUser(user.name, user.publicKey, "", user.publicKey.toBytes())
+        ttp.registerUser(bank.name, bank.publicKey, "", user.publicKey.toBytes())
 
         iPV8CommunicationProtocol.addressBookManager.insertAddress(Address(bank.name, Role.Bank, bank.publicKey, null))
         iPV8CommunicationProtocol.addressBookManager.insertAddress(Address(user.name, Role.User, user.publicKey, null))

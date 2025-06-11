@@ -2,7 +2,6 @@ package nl.tudelft.trustchain.offlineeuro.communication
 
 import android.util.Log
 import it.unisa.dia.gas.jpbc.Element
-import nl.tudelft.ipv8.Peer
 import nl.tudelft.trustchain.offlineeuro.community.OfflineEuroCommunity
 import nl.tudelft.trustchain.offlineeuro.community.message.AddressMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.AddressRequestMessage
@@ -255,7 +254,7 @@ class IPV8CommunicationProtocol(
         Log.d("EUDI","Handle registration message, transaction id: $tid")
         val ttp = participant as TTP
         val publicKey = ttp.group.gElementFromBytes(message.userPKBytes)
-        ttp.registerUser(message.userName, publicKey, message.transactionId, message.requestingPeer)
+        ttp.registerUser(message.userName, publicKey, message.transactionId, message.peerPublicKeyBytes)
     }
 
     private fun handleAddressRequestMessage(message: AddressRequestMessage) {
@@ -285,6 +284,7 @@ class IPV8CommunicationProtocol(
             is TransactionRandomizationElementsRequestMessage -> handleTransactionRandomizationElementsRequest(message)
             is TransactionMessage -> handleTransactionMessage(message)
             is TTPRegistrationMessage -> handleRegistrationMessage(message)
+            is TTPRegistrationReplyMessage -> handleRegistrationReplyMessage(message)
             is FraudControlRequestMessage -> handleFraudControlRequestMessage(message)
             else -> throw Exception("Unsupported message type")
         }
@@ -293,6 +293,7 @@ class IPV8CommunicationProtocol(
 
     // received by user
     private fun handleRegistrationReplyMessage(message: TTPRegistrationReplyMessage) {
+        Log.d("EUDI", "handle registration")
         if (participant !is User) {
             return
         }
@@ -314,11 +315,11 @@ class IPV8CommunicationProtocol(
 
     override fun sendRegisterAtTTPReplyMessage(
         status: String,
-        requestingPeer: Peer
+        publicKey: ByteArray
     ) {
         community.sendRegisterAtTTPReplyMessage(
             status,
-            requestingPeer,
+            publicKey,
         )
     }
 }

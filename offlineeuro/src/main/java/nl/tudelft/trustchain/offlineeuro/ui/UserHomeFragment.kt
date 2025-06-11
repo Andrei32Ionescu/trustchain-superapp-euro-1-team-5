@@ -28,6 +28,7 @@ class UserHomeFragment : OfflineEuroBaseFragment(R.layout.fragment_user_home) {
         super.onViewCreated(view, savedInstanceState)
         if (ParticipantHolder.user != null) {
             user = ParticipantHolder.user!!
+            user.onDataChangeCallback = onUserDataChangeCallBack
             communicationProtocol = user.communicationProtocol as IPV8CommunicationProtocol
             val userName: String = user.name
             val welcomeTextView = view.findViewById<TextView>(R.id.user_home_welcome_text)

@@ -102,6 +102,7 @@ class OfflineEuroCommunity(
     }
 
     private fun onGetRegisterAtTTPReplyPacket(packet: Packet) {
+        Log.d("EUDI", "Got reply packet")
         val (_, payload) = packet.getAuthPayload(TTPRegistrationReplyPayload)
         val message = TTPRegistrationReplyMessage(payload.status)
         addMessage(message)
@@ -109,21 +110,21 @@ class OfflineEuroCommunity(
 
     fun sendRegisterAtTTPReplyMessage(
         status: String,
-        requestingPeer: Peer
+        userPK: ByteArray
     ) {
-//        Log.d("EUDI", "Sending Register at ttp reply $status $userPK")
-//        Log.d("EUDI", userPK.toString())
+        Log.d("EUDI", "Sending Register at ttp reply $status $userPK")
+        Log.d("EUDI", userPK.toString())
 
-//        val peers = getPeers()
-//        Log.d("EUDI", "$peers")
-//        val peer = getPeerByPublicKeyBytes(userPK) ?: throw Exception("Completed Verification: User not found (this error shouldn't happen i think)")
+        val peers = getPeers()
+        Log.d("EUDI", "$peers")
+        val peer = getPeerByPublicKeyBytes(userPK) ?: throw Exception("Completed Verification: User not found (this error shouldn't happen i think)")
         val eudiVerificationCompletedPacket =
             serializePacket(
                 MessageID.REGISTER_AT_TTP_REPLY,
                 TTPRegistrationReplyPayload(status)
             )
 
-        send(requestingPeer, eudiVerificationCompletedPacket)
+        send(peer, eudiVerificationCompletedPacket)
     }
 
     fun getGroupDescriptionAndCRS() {
@@ -184,7 +185,7 @@ class OfflineEuroCommunity(
     fun registerAtTTP(
         name: String,
         myPublicKeyBytes: ByteArray,
-        transactionId: String,
+        legalName: String,
         publicKeyTTP: ByteArray
     ) {
         val ttpPeer = getPeerByPublicKeyBytes(publicKeyTTP) ?: throw Exception("TTP not found")
@@ -195,7 +196,7 @@ class OfflineEuroCommunity(
                 TTPRegistrationPayload(
                     name,
                     myPublicKeyBytes,
-                    transactionId
+                    legalName
                 )
             )
 
@@ -222,7 +223,7 @@ class OfflineEuroCommunity(
                 userName,
                 userPKBytes,
                 transactionId,
-                peer
+                senderPKBytes
             )
 
         addMessage(message)

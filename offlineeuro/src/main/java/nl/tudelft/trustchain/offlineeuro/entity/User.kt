@@ -100,7 +100,8 @@ class User(
     }
 
     fun onReceivedTTPRegisterReply() {
-        onRegister?.invoke()
+        Log.d("EUDI", "hello")
+        onRegister!!.invoke()
     }
 
     override fun onReceivedTransaction(

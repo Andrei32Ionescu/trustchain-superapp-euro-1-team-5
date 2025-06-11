@@ -25,7 +25,6 @@ import java.io.IOException
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
-import nl.tudelft.ipv8.Peer
 
 class TTP(
     name: String = "TTP",
@@ -56,7 +55,7 @@ class TTP(
         name: String,
         publicKey: Element,
         transactionId: String,
-        requestingPeer: Peer
+        peerPublicKeyBytes: ByteArray
     ): Boolean {
         // TODO HANDLE USER REGISTRATION
         Log.d("EUDI", "register user")
@@ -70,7 +69,7 @@ class TTP(
                 Log.d("EUDI", "got name")
                 val result = registeredUserManager.addRegisteredUser(name, publicKey, legalName)
                 onDataChangeCallback?.invoke("Registered $name")
-                communicationProtocol.sendRegisterAtTTPReplyMessage(result.toString(), requestingPeer)
+                communicationProtocol.sendRegisterAtTTPReplyMessage(result.toString(), peerPublicKeyBytes)
 
                 Log.d("EUDI", "SUCESSS Family name: $legalName")
 
@@ -126,7 +125,7 @@ class TTP(
 
     private suspend fun getVPToken(transactionId: String): String? {
         var currentAttempt = 0
-        val maxRetries = 1000
+        val maxRetries = 100
         val delayBetweenRetries = 200L
 
         Log.d("EUDI", "Get VP TOken")

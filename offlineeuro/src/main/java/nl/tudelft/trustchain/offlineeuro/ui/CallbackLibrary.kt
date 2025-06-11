@@ -59,6 +59,8 @@ object CallbackLibrary {
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         }
         val balanceField = view.findViewById<TextView>(R.id.user_home_balance)
+        if (balanceField == null)
+            return
         balanceField.text = user.getBalance().toString()
         val addressList = view.findViewById<LinearLayout>(R.id.user_home_addresslist)
         val addresses = communicationProtocol.addressBookManager.getAllAddresses()
