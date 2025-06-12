@@ -12,7 +12,7 @@ enum class CommunityMessageType {
     TTPRegistrationMessage,
     TTPRegistrationReplyMessage,
     RequestUserVerificationMessage,
-    UserVerificationSubmittedMessage,
+    UserVerificationSubmitMessage,
 
     BlindSignatureRandomnessRequestMessage,
     BlindSignatureRandomnessReplyMessage,

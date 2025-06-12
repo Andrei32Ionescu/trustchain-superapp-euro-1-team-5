@@ -94,6 +94,7 @@ class TTP(
         localScope.launch {
             try {
                 val (deeplink, transactionId) = getEUDI()!!
+//                val result = registeredUserManager.addNonRegisteredUser(name, publicKey, transactionId)
                 communicationProtocol.sendRequestUserVerificationMessage(transactionId, deeplink, peerPublicKeyBytes)
             } catch (e: Exception) {
                 Log.e("Error", "Requesting EUDI data failed", e)

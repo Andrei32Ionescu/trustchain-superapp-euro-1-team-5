@@ -255,7 +255,7 @@ class IPV8CommunicationProtocol(
         Log.d("EUDI","Handle registration message, transaction id: $tid")
         val ttp = participant as TTP
         val publicKey = ttp.group.gElementFromBytes(message.userPKBytes)
-        ttp.sendUserRequestData(message.userName, publicKey, message.userPKBytes)
+        ttp.sendUserRequestData(message.userName, publicKey, message.peerPublicKeyBytes)
         ttp.registerUser(message.userName, publicKey, message.transactionId, message.peerPublicKeyBytes)
     }
 
