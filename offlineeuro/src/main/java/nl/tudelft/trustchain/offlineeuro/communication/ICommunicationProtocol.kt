@@ -16,7 +16,6 @@ interface ICommunicationProtocol {
     fun register(
         userName: String,
         publicKey: Element,
-        transactionId: String,
         nameTTP: String
     )
 
@@ -62,5 +61,10 @@ interface ICommunicationProtocol {
         transactionId: String,
         deeplink: String,
         publicKey: ByteArray,
+    )
+
+    fun sendUserSubmitVerificationMessage(
+        transactionId: String,
+        publicKey: ByteArray
     )
 }

@@ -56,10 +56,7 @@ class TTP(
     private val localScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     fun registerUser(
-        name: String,
-        publicKey: Element,
         transactionId: String,
-        peerPublicKeyBytes: ByteArray
     ): Boolean {
         // TODO HANDLE USER REGISTRATION
         Log.d("EUDI", "register user")
@@ -71,14 +68,22 @@ class TTP(
 
                 val legalName = attributes.optString("family_name")
                 Log.d("EUDI", "got name")
-                val result = registeredUserManager.addRegisteredUser(name, publicKey, legalName)
+                val user = nonRegisteredUserManager.getNonRegisteredUserByTransactionId(transactionId)
+                // delete user from non-registered database
+                nonRegisteredUserManager.deleteNonRegisteredUserByTransactionId(transactionId)
+                val userName = user?.name
+                val publicKey = user?.publicKey
+                val overlayPK = user?.overlayPK // The peer's address over the ipv8 network
+                val result = registeredUserManager.addRegisteredUser(userName!!, publicKey!!, legalName)
                 onDataChangeCallback?.invoke("Registered $name")
-                communicationProtocol.sendRegisterAtTTPReplyMessage(result.toString(), peerPublicKeyBytes)
+                communicationProtocol.sendRegisterAtTTPReplyMessage(result.toString(), overlayPK!!)
 
                 Log.d("EUDI", "SUCESSS Family name: $legalName")
 
             } catch (e: Exception) {
                 Log.e("Error", "EUDI authentication failed", e)
+                val user = nonRegisteredUserManager.getNonRegisteredUserByTransactionId(transactionId)
+                val peerPublicKeyBytes = user?.publicKey!!.toBytes()
                 communicationProtocol.sendRegisterAtTTPReplyMessage("false", peerPublicKeyBytes)
             }
         }
@@ -90,14 +95,14 @@ class TTP(
 //        data: Pair<String, String>,
         name: String,
         publicKey: Element,
-        peerPublicKeyBytes: ByteArray
+        overlayPK: ByteArray
     ) {
         Log.d("EUDI", "send user request data")
         localScope.launch {
             try {
                 val (deeplink, transactionId) = getEUDI()!!
-                val result = nonRegisteredUserManager.addNonRegisteredUser(name, publicKey, transactionId)
-                communicationProtocol.sendRequestUserVerificationMessage(transactionId, deeplink, peerPublicKeyBytes)
+                val result = nonRegisteredUserManager.addNonRegisteredUser(name, publicKey, transactionId, overlayPK)
+                communicationProtocol.sendRequestUserVerificationMessage(transactionId, deeplink, overlayPK)
             } catch (e: Exception) {
                 Log.e("Error", "Requesting EUDI data failed", e)
                 throw e

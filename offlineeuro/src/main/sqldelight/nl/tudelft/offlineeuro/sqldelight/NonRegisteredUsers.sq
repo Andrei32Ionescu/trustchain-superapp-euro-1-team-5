@@ -3,12 +3,13 @@ CREATE TABLE IF NOT EXISTS NonRegisteredUsers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     publicKey BLOB UNIQUE NOT NULL,
-    transactionId TEXT NOT NULL
+    transactionId TEXT NOT NULL,
+    overlayPK BLOB UNIQUE NOT NULL
 );
 
 addNonRegUser:
-INSERT INTO NonRegisteredUsers(name, publicKey, transactionId)
-VALUES (?, ?, ?);
+INSERT INTO NonRegisteredUsers(name, publicKey, transactionId, overlayPK)
+VALUES (?, ?, ?, ?);
 
 getUserByTransactionId:
 SELECT *

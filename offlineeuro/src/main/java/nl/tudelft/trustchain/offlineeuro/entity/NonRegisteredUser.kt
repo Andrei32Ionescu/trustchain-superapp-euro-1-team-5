@@ -7,4 +7,5 @@ data class NonRegisteredUser(
     val name: String,
     val publicKey: Element,
     val transactionId: String,
+    val overlayPK: ByteArray
 )

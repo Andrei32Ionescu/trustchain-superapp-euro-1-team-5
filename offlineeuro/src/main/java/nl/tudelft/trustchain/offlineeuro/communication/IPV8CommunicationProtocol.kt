@@ -23,6 +23,7 @@ import nl.tudelft.trustchain.offlineeuro.community.message.TransactionMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.TransactionRandomizationElementsReplyMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.TransactionRandomizationElementsRequestMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.TransactionResultMessage
+import nl.tudelft.trustchain.offlineeuro.community.message.UserVerificationSubmitMessage
 import nl.tudelft.trustchain.offlineeuro.cryptography.BilinearGroup
 import nl.tudelft.trustchain.offlineeuro.cryptography.GrothSahaiProof
 import nl.tudelft.trustchain.offlineeuro.cryptography.RandomizationElements
@@ -65,12 +66,11 @@ class IPV8CommunicationProtocol(
     override fun register(
         userName: String,
         publicKey: Element,
-        transactionId: String,
         nameTTP: String
     ) {
         Log.d("EUDI", "Registering")
         val ttpAddress = addressBookManager.getAddressByName(nameTTP)
-        community.registerAtTTP(userName, publicKey.toBytes(), transactionId, ttpAddress.peerPublicKey!!)
+        community.registerAtTTP(userName, publicKey.toBytes(), ttpAddress.peerPublicKey!!)
 
 //        val message = waitForMessage(CommunityMessageType.TTPRegistrationReplyMessage) as TTPRegistrationReplyMessage
 
@@ -251,12 +251,14 @@ class IPV8CommunicationProtocol(
         if (participant !is TTP) {
             return
         }
-        val tid = message.transactionId
-        Log.d("EUDI","Handle registration message, transaction id: $tid")
+//        val tid = message.transactionId
+//        Log.d("EUDI","Handle registration message, transaction id: $tid")
+        Log.d("EUDI","Handle registration message, ${message.userName}, ${message.messageType}, ${message.userPKBytes}")
         val ttp = participant as TTP
         val publicKey = ttp.group.gElementFromBytes(message.userPKBytes)
-        ttp.sendUserRequestData(message.userName, publicKey, message.peerPublicKeyBytes)
-        ttp.registerUser(message.userName, publicKey, message.transactionId, message.peerPublicKeyBytes)
+        ttp.sendUserRequestData(message.userName, publicKey, message.overlayPK)
+
+//        val submitVerifMessage = waitForMessage(CommunityMessageType.UserVerificationSubmitMessage) as UserVerificationSubmitMessage
     }
 
     private fun handleAddressRequestMessage(message: AddressRequestMessage) {
@@ -288,6 +290,7 @@ class IPV8CommunicationProtocol(
             is TTPRegistrationMessage -> handleRegistrationMessage(message)
             is TTPRegistrationReplyMessage -> handleRegistrationReplyMessage(message)
             is RequestUserVerificationMessage -> handleRequestUserVerificationMessage(message)
+            is UserVerificationSubmitMessage -> handleUserVerificationSubmitMessage(message)
             is FraudControlRequestMessage -> handleFraudControlRequestMessage(message)
             else -> throw Exception("Unsupported message type")
         }
@@ -313,6 +316,15 @@ class IPV8CommunicationProtocol(
             return
         }
         (participant as User).onReceivedRequestUserVerification(message.deeplink, message.transactionId)
+    }
+
+    private fun handleUserVerificationSubmitMessage(message: UserVerificationSubmitMessage) {
+        if (participant !is TTP) {
+            return
+        }
+        Log.d("EUDI", "Handle user verification submit message")
+        val ttp = participant as TTP
+        ttp.registerUser(message.transactionId)
     }
 
     private fun getParticipantRole(): Role {
@@ -344,6 +356,12 @@ class IPV8CommunicationProtocol(
             deeplink,
             publicKey
         )
-//        val userVerificationSubmittedMessage = waitForMessage(UserVerificationSubmittedMessage)
+    }
+
+    override fun sendUserSubmitVerificationMessage(transactionId: String, publicKey: ByteArray) {
+        community.sendUserVerificationSubmitMessage(
+            transactionId,
+            publicKey
+        )
     }
 }

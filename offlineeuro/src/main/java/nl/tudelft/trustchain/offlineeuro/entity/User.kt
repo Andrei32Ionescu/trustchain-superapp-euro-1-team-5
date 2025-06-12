@@ -46,7 +46,7 @@ class User(
         this.group = group
 
         if (runSetup) {
-            setUp(transactionId!!)
+            setUp()
         } else {
             generateKeyPair()
         }

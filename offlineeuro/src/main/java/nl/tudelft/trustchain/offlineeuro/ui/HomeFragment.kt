@@ -1,7 +1,9 @@
 package nl.tudelft.trustchain.offlineeuro.ui
 
+import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -12,10 +14,13 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.net.toUri
 import androidx.core.os.bundleOf
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -37,10 +42,6 @@ import org.json.JSONObject
 import java.io.IOException
 
 class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
-    private val client = OkHttpClient()
-    private val presentationURL = "https://verifier-backend.eudiw.dev/ui/presentations"
-    private val valdiationURL = "https://verifier-backend.eudiw.dev/utilities/validations/msoMdoc/deviceResponse"
-
     private var transactionId = ""
     private var userName = ""
     private var eudiFinished = false
@@ -52,6 +53,9 @@ class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
 
     private val walletReturned      = CompletableDeferred<Unit>()
     private val registrationReplied = CompletableDeferred<Unit>()
+
+    private var pendingTxId: String? = null
+//    private val WALLET_PACKAGE = "eu.europa.ec.euidi"
 
     override fun onViewCreated(
         view: View,
@@ -69,7 +73,6 @@ class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
         }
 
         view.findViewById<Button>(R.id.JoinAsUserButton).setOnClickListener {
-            // await onReqUserVerif
             showAlertDialog()
         }
         view.findViewById<Button>(R.id.JoinAsAllRolesButton).setOnClickListener {
@@ -114,7 +117,7 @@ class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
         // Set positive button
         alertDialogBuilder.setPositiveButton("Join!") { dialog, which ->
             userName = editText.text.toString()
-//            showEUDIWindow()
+            createUser()
         }
 
         // Set negative button
@@ -127,159 +130,44 @@ class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
         alertDialog.show()
     }
 
-    private fun showEUDIWindow() {
+    // weird warning. application fully functions
+    @SuppressLint("RepeatOnLifecycleWrongUsage")
+    private suspend fun navigateToUserHomeSafely() = withContext(Dispatchers.Main) {
+        repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            // run once, then cancel this inner coroutine
+            ParticipantHolder.user = user
+            findNavController().navigate(R.id.nav_home_userhome)
+            this.cancel()
+        }
+    }
+
+    fun onReqUserVerif(walletRequestURL: String, txId: String): Unit {
         val alertDialogBuilder = AlertDialog.Builder(requireContext())
-
-        alertDialogBuilder.setTitle("Verify Identity")
-
-        // Set positive button
-        alertDialogBuilder.setPositiveButton("Verify") { dialog, which ->
-            lifecycleScope.launch {
-                try {
-                    transactionId = getEUDI()!!
-                    Log.d("EUDI", "got transaction id $transactionId")
-//                    createUser()
-                } catch (e: Exception) {
-                    Log.e("Error", "EUDI authentication failed", e)
+        pendingTxId = txId
+        requireActivity().runOnUiThread {
+            AlertDialog.Builder(requireContext())
+                .setTitle("Verify identity")
+                .setPositiveButton("Verify") { _, _ ->
+                    openWallet(walletRequestURL)
                 }
-            }
+                .setNegativeButton("Cancel", null)
+                .show()
         }
-
-        // Set negative button
-        alertDialogBuilder.setNegativeButton("Cancel") { dialog, which ->
-            dialog.cancel()
-        }
-
-        // Create and show the AlertDialog
-        val alertDialog = alertDialogBuilder.create()
-        alertDialog.show()
     }
 
-    suspend fun getEUDI(): String? {
-        val body = """
-                {
-                  "type": "vp_token",
-                  "presentation_definition": {
-                    "id": "2d4cf775-3ee3-4f56-9f4b-03cdbcbcca8b",
-                    "input_descriptors": [
-                      {
-                        "id": "eu.europa.ec.eudi.pid.1",
-                        "format": {
-                          "mso_mdoc": {
-                            "alg": [
-                              "ES256",
-                              "ES384",
-                              "ES512",
-                              "EdDSA"
-                            ]
-                          }
-                        },
-                        "constraints": {
-                          "limit_disclosure": "required",
-                          "fields": [
-                            {
-                              "path": [
-                                "${'$'}['eu.europa.ec.eudi.pid.1']['family_name']"
-                              ],
-                              "intent_to_retain": false
-                            }
-                          ]
-                        }
-                      }
-                    ]
-                  },
-                  "nonce": "29546f2b-d085-4588-b2bc-5c3523b0c79d",
-                  "request_uri_method": "get"
-                }
-            """.trimIndent()
-
-
-        // Start verifier transaction
-        val result = makeAPIRequest(presentationURL, body, "application/json; charset=utf-8".toMediaType()) ?: return null
-
-        // Parse JSON
-        val jsonObject = JSONObject(result)
-        val transactionId = jsonObject.optString("transaction_id")
-        val clientId = jsonObject.optString("client_id")
-        val requestURI = jsonObject.optString("request_uri")
-        val requestURIMethod = "get"
-
-        // Send authorization request to the wallet to handle it
-        val walletRequestURL = "eudi-openid4vp://?client_id=$clientId&request_uri=$requestURI&request_uri_method=$requestURIMethod"
-
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            data = walletRequestURL.toUri()
+    private fun openWallet(deeplink: String) {
+        val walletIntent = Intent(Intent.ACTION_VIEW, Uri.parse(deeplink)).apply {
+//            setPackage(WALLET_PACKAGE)
+            addCategory(Intent.CATEGORY_BROWSABLE)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
-
-        activityResultLauncher.launch(intent)
-
-        return transactionId
-    }
-
-    fun onReqUserVerif(walletRequestURL: String, txId: String): String {
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            data = walletRequestURL.toUri()
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        startActivity(walletIntent)
+        pendingTxId?.let { tx ->
+            val ttpPk = communicationProtocol.addressBookManager
+                .getAddressByName("TTP").peerPublicKey!!
+            communicationProtocol.sendUserSubmitVerificationMessage(tx, ttpPk)
+            pendingTxId = null
         }
-
-        activityResultLauncher.launch(intent)
-        return txId
-    }
-
-    private suspend fun makeAPIRequest(url: String, body: String, mediaType: MediaType): String? {
-        Log.d("EUDI", "Calling api endpoint: $url")
-
-        return withContext(Dispatchers.IO) {
-            try {
-                val request = if (body != "") {
-                    val requestBody = body.toRequestBody(mediaType)
-
-                    Request.Builder()
-                        .url(url)
-                        .post(requestBody)
-                        .build()
-                } else {
-                    Request.Builder()
-                        .url(url)
-                        .get()
-                        .build()
-                }
-
-                client.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) {
-                        Log.e("EUDI", "Unsuccessful response: ${response.code}")
-                        Log.e("EUDI", "Unsuccessful response: ${response.body?.string()}")
-                        return@withContext null
-                    }
-
-                    val responseBodyString = response.body?.string()
-                    if (responseBodyString.isNullOrEmpty()) {
-                        Log.e("EUDI", "Empty response body")
-                        return@withContext null
-                    }
-
-                    Log.d("EUDI", "Response: $responseBodyString")
-
-                    return@withContext responseBodyString
-                }
-            } catch (e: IOException) {
-                Log.e("EUDI", "IOException: ${e.message}", e)
-                return@withContext null
-            } catch (e: JSONException) {
-                Log.e("EUDI", "JSON parsing error: ${e.message}", e)
-                return@withContext null
-            } catch (e: Exception) {
-                Log.e("EUDI", "Exception: ${e.message}", e)
-                return@withContext null
-            }
-        }
-    }
-
-    private val activityResultLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-//        shouldNavigateOnResume = true
         walletReturned.complete(Unit)
     }
 
@@ -302,7 +190,6 @@ class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
         Log.d("EUDI","on register")
         eudiFinished = true;
         registrationReplied.complete(Unit)
-//        moveToUserHome()
     }
 
     private fun createUser() {
@@ -323,11 +210,10 @@ class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
         Log.d("EUDI", "Created user")
 
         lifecycleScope.launch {
-            // Suspend until BOTH complete
-            walletReturned.await()
-            registrationReplied.await()
+            walletReturned.await() // returned from app
+            registrationReplied.await() // got response from TTP
 
-            moveToUserHome()          // <- runs exactly once, when it’s safe
+            navigateToUserHomeSafely()
         }
     }
 
@@ -342,4 +228,22 @@ class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
             }
         }
     }
+
+//    private val activityResultLauncher = registerForActivityResult(
+//        ActivityResultContracts.StartActivityForResult()
+//    ) { result ->
+////        shouldNavigateOnResume = true
+//        val tx = pendingTxId ?: return@registerForActivityResult
+//
+//        val ttpPkBytes = communicationProtocol
+//            .addressBookManager
+//            .getAddressByName("TTP")
+//            .peerPublicKey
+//
+//        communicationProtocol
+//            .sendUserSubmitVerificationMessage(tx, ttpPkBytes!!)
+//
+//        pendingTxId = null
+//        walletReturned.complete(Unit)
+//    }
 }

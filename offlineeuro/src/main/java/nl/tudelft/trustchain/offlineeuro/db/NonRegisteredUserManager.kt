@@ -30,13 +30,15 @@ class NonRegisteredUserManager(
             id: Long,
             name: String,
             publicKey: ByteArray,
-            transactionId: String
+            transactionId: String,
+            overlayPK: ByteArray
         ->
         NonRegisteredUser(
             id,
             name,
             bilinearGroup.pairing.g1.newElementFromBytes(publicKey).immutable,
-            transactionId
+            transactionId,
+            overlayPK
         )
     }
 
@@ -54,28 +56,17 @@ class NonRegisteredUserManager(
      * @param user the user that should be registered. Its id will be omitted.
      * @return true iff registering the user is successful.
      */
-    fun addRegisteredUser(
-        userName: String,
-        publicKey: Element,
-        legalName: String
-    ): Boolean {
-        queries.addNonRegUser(
-            userName,
-            publicKey.toBytes(),
-            legalName,
-        )
-        return true
-    }
-
     fun addNonRegisteredUser(
         userName: String,
         publicKey: Element,
-        transactionId: String
+        transactionId: String,
+        overlayPK: ByteArray
     ): Boolean {
         queries.addNonRegUser(
             userName,
             publicKey.toBytes(),
             transactionId,
+            overlayPK
         )
         return true
     }
@@ -89,6 +80,10 @@ class NonRegisteredUserManager(
     fun getNonRegisteredUserByTransactionId(transactionId: String): NonRegisteredUser? {
         return queries.getUserByTransactionId(transactionId, nonRegisteredUserMapper)
             .executeAsOneOrNull()
+    }
+
+    fun deleteNonRegisteredUserByTransactionId(transactionId: String) {
+        return queries.deleteUserByTransactionId(transactionId)
     }
 
     /**

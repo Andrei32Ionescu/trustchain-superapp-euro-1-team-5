@@ -19,13 +19,13 @@ abstract class Participant(
     val randomizationElementMap: HashMap<Element, Element> = hashMapOf()
     lateinit var crs: CRS
 
-    fun setUp(transactionId: String = "") {
+    fun setUp() {
         Log.d("EUDI", "User setp 1")
         getGroupDescriptionAndCRS()
         Log.d("EUDI", "User setp 2")
         generateKeyPair()
         Log.d("EUDI", "User setp 3")
-        registerAtTTP(transactionId)
+        registerAtTTP()
     }
 
     fun getGroupDescriptionAndCRS() {
@@ -37,9 +37,9 @@ abstract class Participant(
         publicKey = group.g.powZn(privateKey)
     }
 
-    fun registerAtTTP(transactionId: String = "") {
+    fun registerAtTTP() {
         // TODO NAME OF TTP
-        communicationProtocol.register(name, publicKey, transactionId, "TTP")
+        communicationProtocol.register(name, publicKey, "TTP")
     }
 
     fun generateRandomizationElements(receiverPublicKey: Element): RandomizationElements {
