@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS NonRegisteredUsers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     publicKey BLOB UNIQUE NOT NULL,
-    transactionId STRING NOT NULL
+    transactionId TEXT NOT NULL
 );
 
 addNonRegUser:
@@ -12,7 +12,7 @@ VALUES (?, ?, ?);
 
 getUserByTransactionId:
 SELECT *
-FROM RegisteredUsers
+FROM NonRegisteredUsers
 WHERE transactionId = ?;
 
 deleteUserByTransactionId:

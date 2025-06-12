@@ -27,6 +27,7 @@ import java.io.IOException
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
+import nl.tudelft.trustchain.offlineeuro.db.NonRegisteredUserManager
 
 class TTP(
     name: String = "TTP",
@@ -34,6 +35,7 @@ class TTP(
     communicationProtocol: ICommunicationProtocol,
     context: Context?,
     private val registeredUserManager: RegisteredUserManager = RegisteredUserManager(context, group),
+    private val nonRegisteredUserManager: NonRegisteredUserManager = NonRegisteredUserManager(context, group),
     onDataChangeCallback: ((String?) -> Unit)? = null
 ) : Participant(communicationProtocol, name, onDataChangeCallback) {
     val crsMap: Map<Element, Element>
@@ -94,7 +96,7 @@ class TTP(
         localScope.launch {
             try {
                 val (deeplink, transactionId) = getEUDI()!!
-//                val result = registeredUserManager.addNonRegisteredUser(name, publicKey, transactionId)
+                val result = nonRegisteredUserManager.addNonRegisteredUser(name, publicKey, transactionId)
                 communicationProtocol.sendRequestUserVerificationMessage(transactionId, deeplink, peerPublicKeyBytes)
             } catch (e: Exception) {
                 Log.e("Error", "Requesting EUDI data failed", e)
