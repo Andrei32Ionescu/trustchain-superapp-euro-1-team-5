@@ -14,6 +14,7 @@ import androidx.core.net.toUri
 import androidx.core.os.bundleOf
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -49,6 +50,9 @@ class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
     private lateinit var community: OfflineEuroCommunity
     private lateinit var communicationProtocol: IPV8CommunicationProtocol
 
+    private val walletReturned      = CompletableDeferred<Unit>()
+    private val registrationReplied = CompletableDeferred<Unit>()
+
     override fun onViewCreated(
         view: View,
         savedInstanceState: Bundle?
@@ -65,6 +69,7 @@ class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
         }
 
         view.findViewById<Button>(R.id.JoinAsUserButton).setOnClickListener {
+            // await onReqUserVerif
             showAlertDialog()
         }
         view.findViewById<Button>(R.id.JoinAsAllRolesButton).setOnClickListener {
@@ -109,7 +114,7 @@ class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
         // Set positive button
         alertDialogBuilder.setPositiveButton("Join!") { dialog, which ->
             userName = editText.text.toString()
-            showEUDIWindow()
+//            showEUDIWindow()
         }
 
         // Set negative button
@@ -212,7 +217,15 @@ class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
         return transactionId
     }
 
+    fun onReqUserVerif(walletRequestURL: String, txId: String): String {
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            data = walletRequestURL.toUri()
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
 
+        activityResultLauncher.launch(intent)
+        return txId
+    }
 
     private suspend fun makeAPIRequest(url: String, body: String, mediaType: MediaType): String? {
         Log.d("EUDI", "Calling api endpoint: $url")
@@ -266,7 +279,8 @@ class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
     private val activityResultLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        shouldNavigateOnResume = true
+//        shouldNavigateOnResume = true
+        walletReturned.complete(Unit)
     }
 
     override fun onResume() {
@@ -287,7 +301,8 @@ class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
     private val onRegister: () -> Unit = {
         Log.d("EUDI","on register")
         eudiFinished = true;
-        moveToUserHome()
+        registrationReplied.complete(Unit)
+//        moveToUserHome()
     }
 
     private fun createUser() {
@@ -297,7 +312,8 @@ class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
         val addressBookManager = AddressBookManager(context, group)
         communicationProtocol = IPV8CommunicationProtocol(addressBookManager, community)
         try {
-            user = User(userName, group, context, null, communicationProtocol, onRegister=onRegister, transactionId=transactionId)
+            user = User(userName, group, context, null, communicationProtocol, onRegister=onRegister, transactionId=transactionId,
+                onReqUserVerif={ link:String, txId:String -> onReqUserVerif(link, txId) })
             communicationProtocol.scopePeers()
             val addresses = communicationProtocol.addressBookManager.getAllAddresses()
             Log.d("EUDI", "$addresses")
@@ -306,6 +322,13 @@ class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
         }
         Log.d("EUDI", "Created user")
 
+        lifecycleScope.launch {
+            // Suspend until BOTH complete
+            walletReturned.await()
+            registrationReplied.await()
+
+            moveToUserHome()          // <- runs exactly once, when it’s safe
+        }
     }
 
     private fun moveToUserHome() {

@@ -35,6 +35,7 @@ class User(
     runSetup: Boolean = true,
     onDataChangeCallback: ((String?) -> Unit)? = null,
     val onRegister: (() -> Unit)? = null,
+    val onReqUserVerif: ((String, String) -> Unit)? = null,
     transactionId: String? = "",
 ) : Participant(communicationProtocol, name, onDataChangeCallback) {
     val wallet: Wallet
@@ -97,6 +98,11 @@ class User(
 
     fun getBalance(): Int {
         return walletManager!!.getWalletEntriesToSpend().count()
+    }
+
+    fun onReceivedRequestUserVerification(deeplink: String, transactionId: String) {
+        Log.d("EUDI", "We are inside user class after having received user verification request")
+        onReqUserVerif!!.invoke(deeplink, transactionId)
     }
 
     fun onReceivedTTPRegisterReply() {

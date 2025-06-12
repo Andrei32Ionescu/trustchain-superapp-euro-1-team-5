@@ -1,7 +1,9 @@
 package nl.tudelft.trustchain.offlineeuro.entity
 
 import android.content.Context
+import android.content.Intent
 import android.util.Log
+import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
 import it.unisa.dia.gas.jpbc.Element
 import kotlinx.coroutines.Dispatchers
@@ -75,10 +77,91 @@ class TTP(
 
             } catch (e: Exception) {
                 Log.e("Error", "EUDI authentication failed", e)
+                communicationProtocol.sendRegisterAtTTPReplyMessage("false", peerPublicKeyBytes)
             }
         }
 
         return true;
+    }
+
+    fun sendUserRequestData(
+//        data: Pair<String, String>,
+        name: String,
+        publicKey: Element,
+        peerPublicKeyBytes: ByteArray
+    ) {
+        Log.d("EUDI", "send user request data")
+        localScope.launch {
+            try {
+                val (deeplink, transactionId) = getEUDI()!!
+                communicationProtocol.sendRequestUserVerificationMessage(transactionId, deeplink, peerPublicKeyBytes)
+            } catch (e: Exception) {
+                Log.e("Error", "Requesting EUDI data failed", e)
+                throw e
+            }
+        }
+    }
+
+    suspend fun getEUDI(): Pair<String, String>? {
+        val body = """
+                {
+                  "type": "vp_token",
+                  "presentation_definition": {
+                    "id": "2d4cf775-3ee3-4f56-9f4b-03cdbcbcca8b",
+                    "input_descriptors": [
+                      {
+                        "id": "eu.europa.ec.eudi.pid.1",
+                        "format": {
+                          "mso_mdoc": {
+                            "alg": [
+                              "ES256",
+                              "ES384",
+                              "ES512",
+                              "EdDSA"
+                            ]
+                          }
+                        },
+                        "constraints": {
+                          "limit_disclosure": "required",
+                          "fields": [
+                            {
+                              "path": [
+                                "${'$'}['eu.europa.ec.eudi.pid.1']['family_name']"
+                              ],
+                              "intent_to_retain": false
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  "nonce": "29546f2b-d085-4588-b2bc-5c3523b0c79d",
+                  "request_uri_method": "get"
+                }
+            """.trimIndent()
+
+
+        // Start verifier transaction
+        val result = makeAPIRequest(presentationURL, body, "application/json; charset=utf-8".toMediaType()) ?: return null
+
+        // Parse JSON
+        val jsonObject = JSONObject(result)
+        val transactionId = jsonObject.optString("transaction_id")
+        val clientId = jsonObject.optString("client_id")
+        val requestURI = jsonObject.optString("request_uri")
+        val requestURIMethod = "get"
+
+        // Send authorization request to the wallet to handle it
+        val walletRequestURL = "eudi-openid4vp://?client_id=$clientId&request_uri=$requestURI&request_uri_method=$requestURIMethod"
+
+//        val intent = Intent(Intent.ACTION_VIEW).apply {
+//            data = walletRequestURL.toUri()
+//            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+//        }
+
+//        activityResultLauncher.launch(intent)
+
+        return Pair(walletRequestURL, transactionId)
     }
 
 
@@ -125,7 +208,7 @@ class TTP(
 
     private suspend fun getVPToken(transactionId: String): String? {
         var currentAttempt = 0
-        val maxRetries = 100
+        val maxRetries = 150
         val delayBetweenRetries = 200L
 
         Log.d("EUDI", "Get VP TOken")

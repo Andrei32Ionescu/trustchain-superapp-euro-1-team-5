@@ -57,4 +57,10 @@ interface ICommunicationProtocol {
         status: String,
         publicKey: ByteArray
     )
+
+    fun sendRequestUserVerificationMessage(
+        transactionId: String,
+        deeplink: String,
+        publicKey: ByteArray,
+    )
 }

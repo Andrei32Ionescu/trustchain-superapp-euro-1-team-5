@@ -1,5 +1,6 @@
 package nl.tudelft.trustchain.offlineeuro.entity
 
+import android.util.Log
 import nl.tudelft.trustchain.offlineeuro.communication.IPV8CommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.community.OfflineEuroCommunity
 import nl.tudelft.trustchain.offlineeuro.community.message.AddressMessage
@@ -12,8 +13,10 @@ import nl.tudelft.trustchain.offlineeuro.db.AddressBookManager
 import nl.tudelft.trustchain.offlineeuro.db.DepositedEuroManager
 import nl.tudelft.trustchain.offlineeuro.enums.Role
 import org.junit.Assert
+import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito
+import org.mockito.Mockito.`when`
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.never
@@ -47,7 +50,7 @@ class BankTest {
         val publicKeyCaptor = argumentCaptor<ByteArray>()
 
         whenever(addressBookManager.getAddressByName("TTP")).thenReturn(ttpAddress)
-        whenever(community.registerAtTTP(any(), publicKeyCaptor.capture(), any())).then { }
+        whenever(community.registerAtTTP(any(), publicKeyCaptor.capture(), any(), any())).then { }
 
         val bankName = "SomeBank"
         val bank = Bank(bankName, BilinearGroup(PairingTypes.FromFile), communicationProtocol, null, depositedEuroManager)
@@ -73,7 +76,7 @@ class BankTest {
         val bank = Bank(bankName, group, communicationProtocol, null, depositedEuroManager, false)
 
         verify(community, never()).getGroupDescriptionAndCRS()
-        verify(community, never()).registerAtTTP(any(), any(), any())
+        verify(community, never()).registerAtTTP(any(), any(), any(), any())
         Assert.assertEquals(group, bank.group)
 
         Assert.assertThrows(UninitializedPropertyAccessException::class.java) {

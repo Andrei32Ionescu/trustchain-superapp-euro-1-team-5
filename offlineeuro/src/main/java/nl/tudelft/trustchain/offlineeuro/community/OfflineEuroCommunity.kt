@@ -20,6 +20,7 @@ import nl.tudelft.trustchain.offlineeuro.community.message.FraudControlReplyMess
 import nl.tudelft.trustchain.offlineeuro.community.message.FraudControlRequestMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.ICommunityMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.MessageList
+import nl.tudelft.trustchain.offlineeuro.community.message.RequestUserVerificationMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.TTPRegistrationMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.TTPRegistrationReplyMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.TransactionMessage
@@ -31,6 +32,7 @@ import nl.tudelft.trustchain.offlineeuro.community.payload.BilinearGroupCRSPaylo
 import nl.tudelft.trustchain.offlineeuro.community.payload.BlindSignatureRequestPayload
 import nl.tudelft.trustchain.offlineeuro.community.payload.ByteArrayPayload
 import nl.tudelft.trustchain.offlineeuro.community.payload.FraudControlRequestPayload
+import nl.tudelft.trustchain.offlineeuro.community.payload.RequestUserVerificationPayload
 import nl.tudelft.trustchain.offlineeuro.community.payload.TTPRegistrationPayload
 import nl.tudelft.trustchain.offlineeuro.community.payload.TTPRegistrationReplyPayload
 import nl.tudelft.trustchain.offlineeuro.community.payload.TransactionDetailsPayload
@@ -47,6 +49,7 @@ object MessageID {
     const val GET_GROUP_DESCRIPTION_CRS_REPLY = 10
     const val REGISTER_AT_TTP = 11
     const val REGISTER_AT_TTP_REPLY = 24
+    const val REQUEST_USER_VERIFICATION = 25
 
     const val GET_BLIND_SIGNATURE_RANDOMNESS = 12
     const val GET_BLIND_SIGNATURE_RANDOMNESS_REPLY = 13
@@ -81,6 +84,7 @@ class OfflineEuroCommunity(
 
         messageHandlers[MessageID.REGISTER_AT_TTP] = ::onGetRegisterAtTTPPacket
         messageHandlers[MessageID.REGISTER_AT_TTP_REPLY] = ::onGetRegisterAtTTPReplyPacket
+        messageHandlers[MessageID.REQUEST_USER_VERIFICATION] = ::onGetRequestUserVerificationPacket
 
         messageHandlers[MessageID.GET_BLIND_SIGNATURE_RANDOMNESS] = ::onGetBlindSignatureRandomnessPacket
         messageHandlers[MessageID.GET_BLIND_SIGNATURE_RANDOMNESS_REPLY] = ::onGetBlindSignatureRandomnessReplyPacket
@@ -125,6 +129,30 @@ class OfflineEuroCommunity(
             )
 
         send(peer, eudiVerificationCompletedPacket)
+    }
+
+    private fun onGetRequestUserVerificationPacket(packet: Packet) {
+        Log.d("EUDI", "Got request user verification packet")
+        val (_, payload) = packet.getAuthPayload(RequestUserVerificationPayload)
+        val message = RequestUserVerificationMessage(payload.transactionId, payload.deeplink)
+        addMessage(message)
+    }
+
+    fun sendRequestUserVerificationMessage(
+        transactionId: String,
+        deeplink: String,
+        userPK: ByteArray,
+    ) {
+//        community
+        Log.d("EUDI", "Sending Request User Verification at ttp reply")
+        val peer = getPeerByPublicKeyBytes(userPK) ?: throw Exception("Send Request Error: user not found $userPK")
+        val requestUserVerificationPacket =
+            serializePacket(
+                MessageID.REQUEST_USER_VERIFICATION,
+                RequestUserVerificationPayload(transactionId, deeplink)
+            )
+
+        send(peer, requestUserVerificationPacket)
     }
 
     fun getGroupDescriptionAndCRS() {

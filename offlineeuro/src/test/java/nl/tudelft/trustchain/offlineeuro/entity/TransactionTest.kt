@@ -1,5 +1,6 @@
 package nl.tudelft.trustchain.offlineeuro.entity
 
+import android.util.Log
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import it.unisa.dia.gas.jpbc.Element
 import nl.tudelft.ipv8.Peer
@@ -28,6 +29,7 @@ import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito
+import org.mockito.Mockito.`when`
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.eq
@@ -359,7 +361,7 @@ class TransactionTest {
         bank.generateKeyPair()
         bankCommunity = community
         communicationProtocol.participant = bank
-        ttp.registerUser(bank.name, bank.publicKey)
+        ttp.registerUser(bank.name, bank.publicKey, "", bank.publicKey.toBytes())
     }
 
     private fun createAddressManager(group: BilinearGroup): AddressBookManager {

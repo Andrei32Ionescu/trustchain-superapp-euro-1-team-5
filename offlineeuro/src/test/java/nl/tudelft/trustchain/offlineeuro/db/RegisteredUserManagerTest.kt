@@ -24,10 +24,11 @@ class RegisteredUserManagerTest {
     @Test
     fun addAndRetrieveTest() {
         val name = "Tester"
+        val legalName = "LegalTester"
         val privateKey = group.getRandomZr()
         val publicKey = group.g.powZn(privateKey).immutable
 
-        val registrationResult = registeredUserManager.addRegisteredUser(name, publicKey)
+        val registrationResult = registeredUserManager.addRegisteredUser(name, publicKey, legalName)
         Assert.assertTrue("The registration should be successful", registrationResult)
 
         val findByName = registeredUserManager.getRegisteredUserByName(name)!!

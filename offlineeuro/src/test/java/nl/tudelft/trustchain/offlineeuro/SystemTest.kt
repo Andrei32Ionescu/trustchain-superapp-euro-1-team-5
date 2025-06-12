@@ -1,5 +1,6 @@
 package nl.tudelft.trustchain.offlineeuro
 
+import android.util.Log
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.offlineeuro.sqldelight.Database
@@ -264,6 +265,7 @@ class SystemTest {
 
         // Add the community for later access
         val userName = "User${userList.size}"
+        val txId = "Transaction${userList.size}"
         val community = prepareCommunityMock()
         val communicationProtocol = IPV8CommunicationProtocol(addressBookManager, community)
 
@@ -272,7 +274,7 @@ class SystemTest {
         user.crs = crs
         user.group = group
         userList[user] = community
-        ttp.registerUser(user.name, user.publicKey)
+        ttp.registerUser(user.name, user.publicKey, txId, user.publicKey.toBytes())
         return user
     }
 
@@ -300,7 +302,7 @@ class SystemTest {
         bank = Bank("Bank", group, communicationProtocol, null, depositedEuroManager, runSetup = false)
         bank.crs = crs
         addressBookManager.insertAddress(Address(ttp.name, Role.TTP, ttp.publicKey, "SomeTTPPubKey".toByteArray()))
-        ttp.registerUser(bank.name, bank.publicKey)
+        ttp.registerUser(bank.name, bank.publicKey, "", bank.publicKey.toBytes())
     }
 
     private fun createAddressManager(group: BilinearGroup): AddressBookManager {
