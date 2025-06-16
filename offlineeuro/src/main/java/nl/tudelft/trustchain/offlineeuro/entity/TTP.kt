@@ -34,7 +34,7 @@ class TTP(
     group: BilinearGroup,
     communicationProtocol: ICommunicationProtocol,
     context: Context?,
-    private val registeredUserManager: RegisteredUserManager = RegisteredUserManager(context, group),
+    internal val registeredUserManager: RegisteredUserManager = RegisteredUserManager(context, group),
     private val nonRegisteredUserManager: NonRegisteredUserManager = NonRegisteredUserManager(context, group),
     onDataChangeCallback: ((String?) -> Unit)? = null
 ) : Participant(communicationProtocol, name, onDataChangeCallback) {
