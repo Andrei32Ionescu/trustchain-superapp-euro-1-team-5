@@ -1,6 +1,8 @@
 package nl.tudelft.trustchain.offlineeuro.entity
 
 import android.util.Log
+import io.mockk.every
+import io.mockk.mockkStatic
 import nl.tudelft.trustchain.offlineeuro.communication.IPV8CommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.community.OfflineEuroCommunity
 import nl.tudelft.trustchain.offlineeuro.community.message.AddressMessage
@@ -31,10 +33,12 @@ class BankTest {
 
     @Test
     fun initWithSetupTest() {
+
         val addressBookManager = Mockito.mock(AddressBookManager::class.java)
         val community = Mockito.mock(OfflineEuroCommunity::class.java)
         val communicationProtocol = IPV8CommunicationProtocol(addressBookManager, community)
-
+        mockkStatic(Log::class)
+        every { Log.d(any(),any()) } returns 0
         whenever(community.messageList).thenReturn(communicationProtocol.messageList)
         whenever(community.getGroupDescriptionAndCRS()).then {
             communicationProtocol.messageList.add(
@@ -50,7 +54,7 @@ class BankTest {
         val publicKeyCaptor = argumentCaptor<ByteArray>()
 
         whenever(addressBookManager.getAddressByName("TTP")).thenReturn(ttpAddress)
-        whenever(community.registerAtTTP(any(), publicKeyCaptor.capture(), any(), any())).then { }
+        whenever(community.registerAtTTP(any(), publicKeyCaptor.capture(), any())).then { }
 
         val bankName = "SomeBank"
         val bank = Bank(bankName, BilinearGroup(PairingTypes.FromFile), communicationProtocol, null, depositedEuroManager)
@@ -76,7 +80,7 @@ class BankTest {
         val bank = Bank(bankName, group, communicationProtocol, null, depositedEuroManager, false)
 
         verify(community, never()).getGroupDescriptionAndCRS()
-        verify(community, never()).registerAtTTP(any(), any(), any(), any())
+        verify(community, never()).registerAtTTP(any(), any(), any())
         Assert.assertEquals(group, bank.group)
 
         Assert.assertThrows(UninitializedPropertyAccessException::class.java) {

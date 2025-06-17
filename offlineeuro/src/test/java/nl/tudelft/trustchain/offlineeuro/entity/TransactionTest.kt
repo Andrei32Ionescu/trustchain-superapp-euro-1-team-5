@@ -22,6 +22,7 @@ import nl.tudelft.trustchain.offlineeuro.cryptography.Schnorr
 import nl.tudelft.trustchain.offlineeuro.cryptography.SchnorrSignature
 import nl.tudelft.trustchain.offlineeuro.db.AddressBookManager
 import nl.tudelft.trustchain.offlineeuro.db.DepositedEuroManager
+import nl.tudelft.trustchain.offlineeuro.db.NonRegisteredUserManager
 import nl.tudelft.trustchain.offlineeuro.db.RegisteredUserManager
 import nl.tudelft.trustchain.offlineeuro.db.WalletManager
 import nl.tudelft.trustchain.offlineeuro.enums.Role
@@ -338,12 +339,13 @@ class TransactionTest {
     private fun createTTP() {
         val addressBookManager = createAddressManager(group)
         val registeredUserManager = RegisteredUserManager(null, group, createDriver())
+        val nonRegisteredUserManager = NonRegisteredUserManager(null,group,createDriver())
 
         val ttpCommunity = prepareCommunityMock()
         val communicationProtocol = IPV8CommunicationProtocol(addressBookManager, ttpCommunity)
 
         Mockito.`when`(ttpCommunity.messageList).thenReturn(communicationProtocol.messageList)
-        ttp = TTP("TTP", group, communicationProtocol, null, registeredUserManager)
+        ttp = TTP("TTP", group, communicationProtocol, null, registeredUserManager,nonRegisteredUserManager)
         crs = ttp.crs
         communicationProtocol.participant = ttp
     }
@@ -361,7 +363,9 @@ class TransactionTest {
         bank.generateKeyPair()
         bankCommunity = community
         communicationProtocol.participant = bank
-        ttp.registerUser(bank.name, bank.publicKey, "", bank.publicKey.toBytes())
+        //ttp.registerUser(bank.name, bank.publicKey, "", bank.publicKey.toBytes())
+        ttp.registeredUserManager.addRegisteredUser(bank.name, bank.publicKey, "testBank")
+
     }
 
     private fun createAddressManager(group: BilinearGroup): AddressBookManager {
