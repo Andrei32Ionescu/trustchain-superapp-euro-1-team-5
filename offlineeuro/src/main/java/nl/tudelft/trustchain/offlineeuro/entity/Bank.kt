@@ -1,6 +1,7 @@
 package nl.tudelft.trustchain.offlineeuro.entity
 
 import android.content.Context
+import android.util.Log
 import it.unisa.dia.gas.jpbc.Element
 import nl.tudelft.trustchain.offlineeuro.communication.ICommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.cryptography.BilinearGroup
@@ -44,15 +45,15 @@ class Bank(
 
     fun createBlindSignature(
         challenge: BigInteger,
-        userPublicKey: Element
+        userPublicKey: Element,
+        amount: Long
     ): BigInteger {
         val k =
             lookUp(userPublicKey)
                 ?: return BigInteger.ZERO
         remove(userPublicKey)
 
-        onDataChangeCallback?.invoke("A token was withdrawn by $userPublicKey")
-        // <Subtract balance here>
+        onDataChangeCallback?.invoke("A token of €${amount.toFloat()/100.0} was withdrawn by $userPublicKey")
         return Schnorr.signBlindedChallenge(k, challenge, privateKey)
     }
 
@@ -89,7 +90,8 @@ class Bank(
         if (duplicateEuros.isEmpty()) {
             depositedEuroLogger.add(Pair(euro.serialNumber, false))
             depositedEuroManager.insertDigitalEuro(euro)
-            onDataChangeCallback?.invoke("An euro was deposited successfully by $publicKeyUser")
+            val amount = euro.amount.toFloat()/100.0
+            onDataChangeCallback?.invoke("$amount euro was deposited successfully by $publicKeyUser")
             return "Deposit was successful!"
         }
 

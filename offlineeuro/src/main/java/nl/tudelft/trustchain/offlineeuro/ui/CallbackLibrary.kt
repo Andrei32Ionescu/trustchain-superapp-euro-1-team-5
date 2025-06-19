@@ -59,9 +59,19 @@ object CallbackLibrary {
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         }
         val balanceField = view.findViewById<TextView>(R.id.user_home_balance)
-        if (balanceField == null)
-            return
-        balanceField.text = user.getBalance().toString()
+
+        balanceField.text = buildString {
+            append("€")
+            append((user.getBalance().toFloat() / 100.0).toString())
+        }
+        // Update wallet tokens table
+        val tokensList = view.findViewById<LinearLayout>(R.id.user_home_tokens_list)
+        if (tokensList != null) {
+            val walletEntries = user.wallet.getAllWalletEntriesToSpend() +
+                user.wallet.getAllWalletEntriesToDoubleSpend()
+            TableHelpers.addWalletTokensToTable(tokensList, walletEntries.distinctBy { it.digitalEuro.serialNumber }, user, context)
+        }
+
         val addressList = view.findViewById<LinearLayout>(R.id.user_home_addresslist)
         val addresses = communicationProtocol.addressBookManager.getAllAddresses()
         TableHelpers.addAddressesToTable(addressList, addresses, user, context)

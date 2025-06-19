@@ -1,18 +1,23 @@
 package nl.tudelft.trustchain.offlineeuro.ui
 
+import android.app.AlertDialog
 import android.content.Context
 import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import nl.tudelft.trustchain.offlineeuro.R
+import nl.tudelft.trustchain.offlineeuro.communication.IPV8CommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.entity.Address
 import nl.tudelft.trustchain.offlineeuro.entity.Bank
 import nl.tudelft.trustchain.offlineeuro.entity.RegisteredUser
 import nl.tudelft.trustchain.offlineeuro.entity.User
+import nl.tudelft.trustchain.offlineeuro.entity.WalletEntry
 import nl.tudelft.trustchain.offlineeuro.enums.Role
+import kotlin.math.floor
 
 object TableHelpers {
     fun removeAllButFirstRow(table: LinearLayout) {
@@ -118,6 +123,189 @@ object TableHelpers {
         return layout
     }
 
+    fun addWalletTokensToTable(
+        table: LinearLayout,
+        walletEntries: List<WalletEntry>,
+        user: User,
+        context:Context
+    ) {
+        removeAllButFirstRow(table)
+        for (walletEntry in  walletEntries){
+            table.addView(walletEntryToTableRow(walletEntry,context,user))
+        }
+    }
+
+    // Convert wallet entry to table row
+    private fun walletEntryToTableRow(
+        walletEntry: WalletEntry,
+        context: Context,
+        user: User
+    ): LinearLayout{
+        val tableRow = LinearLayout(context)
+        tableRow.layoutParams = rowParams()
+        tableRow.orientation = LinearLayout.HORIZONTAL
+
+        val styledContext = ContextThemeWrapper(context, R.style.TableCell)
+
+        //Token amount field
+        val amountField = TextView (styledContext).apply{
+            layoutParams= layoutParams(0.2f)
+            text= "€${walletEntry.digitalEuro.amount.toFloat()/100.0}"
+        }
+        // Token status field
+        val statusField = TextView(styledContext).apply {
+            layoutParams = layoutParams(0.2f)
+            text = when (walletEntry.timesSpent) {
+                0L -> "Unspent"
+                1L -> "Spent"
+                else -> "Double-spent"
+            }
+        }
+        // Serial number field (truncated)
+        val serialField = TextView(styledContext).apply {
+            layoutParams = layoutParams(0.3f)
+            text = walletEntry.digitalEuro.serialNumber.take(8) + "..."
+        }
+        tableRow.addView(amountField)
+        tableRow.addView(statusField)
+        tableRow.addView(serialField)
+
+        // Action buttons
+        val buttonWrapper = LinearLayout(context)
+        val params = layoutParams(0.3f)
+        buttonWrapper.gravity = Gravity.CENTER_HORIZONTAL
+        buttonWrapper.orientation = LinearLayout.HORIZONTAL
+        buttonWrapper.layoutParams = params
+
+        val sendButton = Button(context)
+        val depositButton = Button(context)
+
+        applyButtonStyling(sendButton, context)
+        applyButtonStyling(depositButton, context)
+
+        setTokenActionButtons(sendButton, depositButton, walletEntry, user, context)
+
+        buttonWrapper.addView(sendButton)
+        buttonWrapper.addView(depositButton)
+        tableRow.addView(buttonWrapper)
+
+        return tableRow
+    }
+
+    //Set action buttons for tokens
+    private fun setTokenActionButtons(
+        sendButton: Button,
+        depositButton: Button,
+        walletEntry: WalletEntry,
+        user: User,
+        context: Context
+    ){
+        val digitalEuro = walletEntry.digitalEuro
+        if( walletEntry.timesSpent == 0L){
+            //Unspent token- can send or deposit
+            sendButton.text="Send"
+            sendButton.setOnClickListener {
+                showUserSelectionDialog(context, user) { selectedUser ->
+                    try {
+                        val result = user.sendSpecificDigitalEuroTo(digitalEuro, selectedUser)
+                        Toast.makeText(context, "Sent successfully: $result", Toast.LENGTH_SHORT)
+                            .show()
+                    } catch (e: Exception) {
+                        Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            //DEPOSIT
+            depositButton.text = "Deposit"
+            depositButton.setOnClickListener{
+                showBankSelectionDialog(context, user) { selectedBank ->
+                    try {
+                        val result = user.sendSpecificDigitalEuroTo(digitalEuro, selectedBank)
+                        Toast.makeText(context, "Deposited successfully: $result", Toast.LENGTH_SHORT).show()
+                    } catch (e: Exception) {
+                        Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        } else if (walletEntry.timesSpent==1L) {
+            // Spent once - can double spend
+            sendButton.text = "Double Spend"
+            sendButton.setOnClickListener {
+                showUserSelectionDialog(context, user) { selectedUser ->
+                    try {
+                        val result = user.doubleSpendSpecificDigitalEuroTo(digitalEuro, selectedUser)
+                        Toast.makeText(context, "Double spent: $result", Toast.LENGTH_SHORT).show()
+                    } catch (e: Exception) {
+                        Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+
+            depositButton.text = "DS to Bank"
+            depositButton.setOnClickListener {
+                showBankSelectionDialog(context, user) { selectedBank ->
+                    try {
+                        val result = user.doubleSpendSpecificDigitalEuroTo(digitalEuro, selectedBank)
+                        Toast.makeText(context, "Doubly spent deposit: $result", Toast.LENGTH_SHORT).show()
+                    } catch (e: Exception) {
+                        Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            depositButton.isEnabled = true
+        } else {
+            // Already double spent - no actions available
+            sendButton.text = "-"
+            sendButton.isEnabled = false
+            depositButton.text = "-"
+            depositButton.isEnabled = false
+        }
+    }
+    // NEW: Show user selection dialog
+    private fun showUserSelectionDialog(
+        context: Context,
+        user: User,
+        onUserSelected: (String) -> Unit
+    ) {
+        val communicationProtocol = user.communicationProtocol as IPV8CommunicationProtocol
+        val addresses = communicationProtocol.addressBookManager.getAllAddresses()
+        val users = addresses.filter { it.type == Role.User }.map { it.name }
+
+        if (users.isEmpty()) {
+            Toast.makeText(context, "No users available", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val builder = AlertDialog.Builder(context)
+        builder.setTitle("Select User")
+        builder.setItems(users.toTypedArray()) { _, which ->
+            onUserSelected(users[which])
+        }
+        builder.show()
+    }
+    // Show bank selection dialog
+    private fun showBankSelectionDialog(
+        context: Context,
+        user: User,
+        onBankSelected: (String) -> Unit
+    ) {
+        val communicationProtocol = user.communicationProtocol as IPV8CommunicationProtocol
+        val addresses = communicationProtocol.addressBookManager.getAllAddresses()
+        val banks = addresses.filter { it.type == Role.Bank }.map { it.name }
+
+        if (banks.isEmpty()) {
+            Toast.makeText(context, "No banks available", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val builder = AlertDialog.Builder(context)
+        builder.setTitle("Select Bank")
+        builder.setItems(banks.toTypedArray()) { _, which ->
+            onBankSelected(banks[which])
+        }
+        builder.show()
+    }
+
     fun addAddressesToTable(
         table: LinearLayout,
         addresses: List<Address>,
@@ -202,11 +390,17 @@ object TableHelpers {
     ) {
         mainButton.text = "Withdraw"
         mainButton.setOnClickListener {
-            try {
-                val digitalEuro = user.withdrawDigitalEuro(bankName)
-                Toast.makeText(context, "Successfully withdrawn ${digitalEuro.serialNumber}", Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
-                Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
+            showWithdrawAmountDialog(context) { selectedAmount ->
+                try {
+                    val digitalEuro = user.withdrawDigitalEuro(bankName, selectedAmount)
+                    Toast.makeText(
+                        context,
+                        "Successfully withdrawn €${digitalEuro.amount.toFloat() / 100.0}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                } catch (e: Exception) {
+                    Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
+                }
             }
         }
 
@@ -221,6 +415,48 @@ object TableHelpers {
             }
         }
     }
+
+    private fun showWithdrawAmountDialog(context: Context, onAmountSelected: (Long) -> Unit) {
+        val options = arrayOf("€1", "€5", "€10", "€20", "€50", "Custom amount")
+
+        val builder = AlertDialog.Builder(context)
+        builder.setTitle("Select amount to withdraw")
+        builder.setItems(options) { dialog, which ->
+            when (which) {
+                0 -> onAmountSelected(100L)
+                1 -> onAmountSelected(500L)
+                2 -> onAmountSelected(1000L)
+                3 -> onAmountSelected(2000L)
+                4 -> onAmountSelected(5000L)
+                5 -> showCustomAmountDialog(context, onAmountSelected)
+            }
+        }
+        builder.show()
+    }
+
+    private fun showCustomAmountDialog(context: Context, onAmountEntered: (Long) -> Unit) {
+        val input = EditText(context).apply {
+            inputType = android.text.InputType.TYPE_CLASS_TEXT
+            hint = "Enter an amount (e.g, 7.50)"
+        }
+
+        AlertDialog.Builder(context)
+            .setTitle("Enter custom amount")
+            .setView(input)
+            .setPositiveButton("OK") { _, _ ->
+                val text = input.text.toString()
+                val amount = text.toDoubleOrNull()
+                if (amount != null && amount > 0) {
+                    val cents = (amount * 100).toLong()
+                    onAmountEntered(cents)
+                } else {
+                    Toast.makeText(context, "Invalid amount", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
 
     fun setUserActionButtons(
         mainButton: Button,

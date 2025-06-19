@@ -45,6 +45,7 @@ import nl.tudelft.trustchain.offlineeuro.cryptography.RandomizationElementsBytes
 import nl.tudelft.trustchain.offlineeuro.entity.TransactionDetailsBytes
 import nl.tudelft.trustchain.offlineeuro.enums.Role
 import java.math.BigInteger
+import android.util.Log
 
 object MessageID {
     const val GET_GROUP_DESCRIPTION_CRS = 9
@@ -341,7 +342,9 @@ class OfflineEuroCommunity(
     fun getBlindSignature(
         challenge: BigInteger,
         publicKeyBytes: ByteArray,
-        bankPublicKeyBytes: ByteArray
+        bankPublicKeyBytes: ByteArray,
+        amount: Long
+
     ) {
         val bankPeer = getPeerByPublicKeyBytes(bankPublicKeyBytes)
 
@@ -351,7 +354,8 @@ class OfflineEuroCommunity(
                 MessageID.GET_BLIND_SIGNATURE,
                 BlindSignatureRequestPayload(
                     challenge,
-                    publicKeyBytes
+                    publicKeyBytes,
+                    amount
                 )
             )
 
@@ -371,6 +375,7 @@ class OfflineEuroCommunity(
             BlindSignatureRequestMessage(
                 payload.challenge,
                 payload.publicKeyBytes,
+                payload.amount,
                 requestingPeer
             )
         addMessage(message)
@@ -476,6 +481,7 @@ class OfflineEuroCommunity(
     }
 
     fun onTransactionPacket(packet: Packet) {
+        //Log.d("OfflineEuroCommunity", "On transaction packet!")
         val (peer, payload) = packet.getAuthPayload(TransactionDetailsPayload)
         onTransaction(peer, payload)
     }
@@ -484,6 +490,7 @@ class OfflineEuroCommunity(
         peer: Peer,
         payload: TransactionDetailsPayload
     ) {
+        //Log.d("OfflineEuroCommunity", "On transaction message!")
         val publicKey = payload.publicKey
         val transactionDetailsBytes = payload.transactionDetailsBytes
         val message = TransactionMessage(publicKey, transactionDetailsBytes, peer)

@@ -1,6 +1,7 @@
 package nl.tudelft.trustchain.offlineeuro.db
 
 import android.content.Context
+import android.util.Log
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import nl.tudelft.offlineeuro.sqldelight.Database
@@ -18,23 +19,29 @@ class WalletManager(
     private val queries: WalletQueries = database.walletQueries
     private val walletEntryMapper = {
             serialNumber: String,
+            amount: Long,
             firstTheta: ByteArray,
             signature: ByteArray,
             previousProofs: ByteArray?,
             secretT: ByteArray,
             transactionSignature: ByteArray?,
-            timesSpent: Long
+            timesSpent: Long,
+            receivedTimestamp: Long,
+            transferCount: Long
         ->
         WalletEntry(
             DigitalEuro(
                 serialNumber,
+                amount,
                 group.gElementFromBytes(firstTheta),
                 deserializeSchnorr(signature)!!,
                 deserializeGSP(previousProofs)
             ),
             group.zrElementFromBytes(secretT),
             deserializeSchnorr(transactionSignature),
-            timesSpent
+            timesSpent,
+            receivedTimestamp,
+            transferCount.toInt()
         )
     }
 
@@ -57,6 +64,7 @@ class WalletManager(
 
         queries.insertWalletEntry(
             digitalEuro.serialNumber,
+            digitalEuro.amount,
             digitalEuro.firstTheta1.toBytes(),
             serialize(digitalEuro.signature)!!,
             serialize(digitalEuro.proofs),
@@ -95,16 +103,30 @@ class WalletManager(
         )
     }
 
+    // A user stores every token they ever receive, which is used to implement double spending functionality to see if the bank can detect it.
+    // It is possibly also utilized on the user's device for them to detect double spending at deposit time.
+    // If it occurs that a user receives the same token they sent out previously, and its value is unchanged given a different fee function,
+    // Then we must query the token with the last received timestamp, as otherwise the DB would return multiple tokens.
     fun getWalletEntryByDigitalEuro(digitalEuro: DigitalEuro): WalletEntry? {
         return queries.getWalletEntryByDescriptor(
             digitalEuro.serialNumber,
             digitalEuro.firstTheta1.toBytes(),
             serialize(digitalEuro.signature)!!,
+            digitalEuro.amount,
             walletEntryMapper
-        ).executeAsOneOrNull()
+        ).executeAsList().sortedByDescending { entry -> entry.receivedTimestamp }.firstOrNull()
     }
 
     fun clearWalletEntries() {
         queries.clearWalletTable()
+    }
+
+    fun incrementTransferCount(digitalEuro: DigitalEuro) {
+        queries.incrementTransferCount(
+            digitalEuro.serialNumber,
+            digitalEuro.firstTheta1.toBytes(),
+            serialize(digitalEuro.signature)!!,
+            serialize(digitalEuro.proofs)
+        )
     }
 }

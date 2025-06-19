@@ -1,9 +1,11 @@
 package nl.tudelft.trustchain.offlineeuro.entity
 
 import android.content.Context
+
 import android.content.Intent
 import android.util.Log
 import androidx.core.net.toUri
+
 import it.unisa.dia.gas.jpbc.Element
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -57,10 +59,41 @@ class User(
         wallet = Wallet(privateKey, publicKey, walletManager!!)
     }
 
+    // Send a specific digital euro to a receiver
+    fun sendSpecificDigitalEuroTo(digitalEuro: DigitalEuro, nameReceiver: String): String {
+        val randomizationElements = communicationProtocol.requestTransactionRandomness(nameReceiver, group)
+        var deposit = false
+        if (nameReceiver.lowercase().contains("bank")) {
+            deposit = true
+        }
+        val transactionDetails = wallet.spendSpecificEuro(digitalEuro, randomizationElements, group, crs, deposit)
+            ?: throw Exception("Cannot spend this specific euro")
+        val result = communicationProtocol.sendTransactionDetails(nameReceiver, transactionDetails)
+        onDataChangeCallback?.invoke(result)
+        return result
+    }
+    // Double spend a specific digital euro to a receiver
+    fun doubleSpendSpecificDigitalEuroTo(digitalEuro: DigitalEuro, nameReceiver: String): String {
+        val randomizationElements = communicationProtocol.requestTransactionRandomness(nameReceiver, group)
+        var deposit = false
+        if (nameReceiver.lowercase().contains("bank")) {
+            deposit = true
+        }
+        val transactionDetails = wallet.doubleSpendSpecificEuro(digitalEuro, randomizationElements, group, crs, deposit)
+            ?: throw Exception("Cannot double spend this specific euro")
+        val result = communicationProtocol.sendTransactionDetails(nameReceiver, transactionDetails)
+        onDataChangeCallback?.invoke(result)
+        return result
+    }
+
     fun sendDigitalEuroTo(nameReceiver: String): String {
         val randomizationElements = communicationProtocol.requestTransactionRandomness(nameReceiver, group)
+        var deposit = false
+        if (nameReceiver.lowercase().contains("bank")) {
+            deposit = true
+        }
         val transactionDetails =
-            wallet.spendEuro(randomizationElements, group, crs)
+            wallet.spendEuro(randomizationElements, group, crs, deposit)
                 ?: throw Exception("No euro to spend")
 
         val result = communicationProtocol.sendTransactionDetails(nameReceiver, transactionDetails)
@@ -70,13 +103,21 @@ class User(
 
     fun doubleSpendDigitalEuroTo(nameReceiver: String): String {
         val randomizationElements = communicationProtocol.requestTransactionRandomness(nameReceiver, group)
-        val transactionDetails = wallet.doubleSpendEuro(randomizationElements, group, crs)
+        var deposit = false
+        if (nameReceiver.lowercase().contains("bank")) {
+            deposit = true
+        }
+        val transactionDetails = wallet.doubleSpendEuro(randomizationElements, group, crs, deposit)
         val result = communicationProtocol.sendTransactionDetails(nameReceiver, transactionDetails!!)
         onDataChangeCallback?.invoke(result)
         return result
     }
 
-    fun withdrawDigitalEuro(bank: String): DigitalEuro {
+    fun withdrawDigitalEuro(bank: String, amount: Long): DigitalEuro {
+        if (amount <= 0.0) {
+            throw IllegalArgumentException("Amount must be positive")
+        }
+
         val serialNumber = UUID.randomUUID().toString()
         val firstT = group.getRandomZr()
         val tInv = firstT.mul(-1)
@@ -84,20 +125,23 @@ class User(
 
         val bytesToSign = serialNumber.toByteArray() + initialTheta.toBytes()
 
+
         val bankRandomness = communicationProtocol.getBlindSignatureRandomness(publicKey, bank, group)
         val bankPublicKey = communicationProtocol.getPublicKeyOf(bank, group)
 
         val blindedChallenge = Schnorr.createBlindedChallenge(bankRandomness, bytesToSign, bankPublicKey, group)
-        val blindSignature = communicationProtocol.requestBlindSignature(publicKey, bank, blindedChallenge.blindedChallenge)
+        val blindSignature = communicationProtocol.requestBlindSignature(publicKey, bank, blindedChallenge.blindedChallenge, amount)
         val signature = Schnorr.unblindSignature(blindedChallenge, blindSignature)
-        val digitalEuro = DigitalEuro(serialNumber, initialTheta, signature, arrayListOf())
+        val digitalEuro = DigitalEuro(serialNumber, amount, initialTheta, signature, arrayListOf())
         wallet.addToWallet(digitalEuro, firstT)
-        onDataChangeCallback?.invoke("Withdrawn ${digitalEuro.serialNumber} successfully!")
+        onDataChangeCallback?.invoke("Withdrawn €${amount.toFloat()/100.0} successfully!")
         return digitalEuro
     }
 
-    fun getBalance(): Int {
-        return walletManager!!.getWalletEntriesToSpend().count()
+    fun getBalance(): Long {
+        return walletManager!!.getWalletEntriesToSpend().sumOf {
+            it.digitalEuro.amount
+        }
     }
 
     fun onReceivedRequestUserVerification(deeplink: String, transactionId: String) {
@@ -115,14 +159,14 @@ class User(
         publicKeyBank: Element,
         publicKeySender: Element
     ): String {
-        Log.d("EUDI","got transaction")
+//        onDataChangeCallback?.invoke("ENTERED RECEIVE FUNCTION")
         val usedRandomness = lookUpRandomness(publicKeySender) ?: return "Randomness Not found!"
         removeRandomness(publicKeySender)
         val transactionResult = Transaction.validate(transactionDetails, publicKeyBank, group, crs)
-
         if (transactionResult.valid) {
             wallet.addToWallet(transactionDetails, usedRandomness)
-            onDataChangeCallback?.invoke("Received an euro from $publicKeySender")
+            val amount = transactionDetails.digitalEuro.amount
+            onDataChangeCallback?.invoke("Received ${amount.toFloat()/100.0} euro from $publicKeySender")
             return transactionResult.description
         }
         onDataChangeCallback?.invoke(transactionResult.description)

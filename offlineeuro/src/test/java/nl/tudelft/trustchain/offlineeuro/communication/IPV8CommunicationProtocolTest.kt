@@ -96,7 +96,7 @@ class IPV8CommunicationProtocolTest {
             community.messageList.add(message)
         }
 
-        `when`(community.getBlindSignature(any(), any(), any())).then {
+        `when`(community.getBlindSignature(any(), any(), any(), any())).then {
             val message = BlindSignatureReplyMessage(blindSignature)
             community.messageList.add(message)
         }
@@ -199,8 +199,9 @@ class IPV8CommunicationProtocolTest {
         addressBookManager.insertAddress(bankAddress)
         val publicKey = groupDescription.generateRandomElementOfG()
         val challenge = BigInteger("12352132521521321521312")
-        val signature = iPV8CommunicationProtocol.requestBlindSignature(publicKey, bankAddress.name, challenge)
-        verify(community, times(1)).getBlindSignature(challenge, publicKey.toBytes(), bankAddress.peerPublicKey!!)
+        val amount = 200L
+        val signature = iPV8CommunicationProtocol.requestBlindSignature(publicKey, bankAddress.name, challenge, amount)
+        verify(community, times(1)).getBlindSignature(challenge, publicKey.toBytes(), bankAddress.peerPublicKey!!, amount)
         Assert.assertEquals("The returned signature should be correct", blindSignature, signature)
     }
 
@@ -212,12 +213,13 @@ class IPV8CommunicationProtocolTest {
         val challenge = BigInteger("321321521421097502142")
         val publicKey = groupDescription.generateRandomElementOfG()
         val signature = BigInteger("2457921903721896428193682163921")
-        `when`(bank.createBlindSignature(challenge, publicKey)).thenReturn(signature)
+        val amount = 200L
+        `when`(bank.createBlindSignature(challenge, publicKey, amount)).thenReturn(signature)
         `when`(bank.group).thenReturn(groupDescription)
-        val blindSignatureRequestMessage = BlindSignatureRequestMessage(challenge, publicKey.toBytes(), receivingPeer)
+        val blindSignatureRequestMessage = BlindSignatureRequestMessage(challenge, publicKey.toBytes(), amount, receivingPeer)
         community.messageList.add(blindSignatureRequestMessage)
 
-        verify(bank, times(1)).createBlindSignature(challenge, publicKey)
+        verify(bank, times(1)).createBlindSignature(challenge, publicKey, amount)
         verify(community, times(1)).sendBlindSignature(signature, receivingPeer)
     }
 

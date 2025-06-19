@@ -114,12 +114,12 @@ class BankTest {
         val bytesToSign = serialNumber.toByteArray() + elementToSign
 
         val blindedChallenge = Schnorr.createBlindedChallenge(firstRandomness, bytesToSign, bank.publicKey, ttpGroup)
-        val blindSignature = bank.createBlindSignature(blindedChallenge.blindedChallenge, publicKey)
+        val blindSignature = bank.createBlindSignature(blindedChallenge.blindedChallenge, publicKey, 200L)
         val blindSchnorrSignature = Schnorr.unblindSignature(blindedChallenge, blindSignature)
         Assert.assertTrue(Schnorr.verifySchnorrSignature(blindSchnorrSignature, bank.publicKey, ttpGroup))
 
         val noRandomnessRequestedKey = ttpGroup.generateRandomElementOfG()
-        val response = bank.createBlindSignature(blindedChallenge.blindedChallenge, noRandomnessRequestedKey)
+        val response = bank.createBlindSignature(blindedChallenge.blindedChallenge, noRandomnessRequestedKey, 200L)
         Assert.assertEquals("There should be no randomness found", BigInteger.ZERO, response)
     }
 

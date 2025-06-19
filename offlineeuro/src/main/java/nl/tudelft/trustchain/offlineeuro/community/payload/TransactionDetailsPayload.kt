@@ -19,9 +19,12 @@ class TransactionDetailsPayload(
         // Add the Digital Euro Part
         val digitalEuroBytes = transactionDetailsBytes.digitalEuroBytes
         payload += serializeVarLen(digitalEuroBytes.serialNumberBytes)
+        payload += serializeVarLen(digitalEuroBytes.amountBytes)
         payload += serializeVarLen(digitalEuroBytes.firstTheta1Bytes)
         payload += serializeVarLen(digitalEuroBytes.signatureBytes)
         payload += serializeVarLen(digitalEuroBytes.proofsBytes)
+
+
 
         // Add the current transaction parts
         val currentTransactionBytes = transactionDetailsBytes.currentTransactionProofBytes
@@ -50,6 +53,9 @@ class TransactionDetailsPayload(
             // Digital Euro Parts
             val (serialNumberBytes, serialNumberSize) = deserializeVarLen(buffer, localOffset)
             localOffset += serialNumberSize
+
+            val (amountBytes, amountSize) = deserializeVarLen(buffer, localOffset)
+            localOffset += amountSize
 
             val (firstTheta1Bytes, firstTheta1Size) = deserializeVarLen(buffer, localOffset)
             localOffset += firstTheta1Size
@@ -88,7 +94,7 @@ class TransactionDetailsPayload(
             localOffset += spenderPublicKeySize
 
             val digitalEuroBytes =
-                DigitalEuroBytes(serialNumberBytes, firstTheta1Bytes, signatureBytes, proofBytes)
+                DigitalEuroBytes(serialNumberBytes, amountBytes,firstTheta1Bytes, signatureBytes, proofBytes)
             val transactionProofBytes =
                 TransactionProofBytes(grothSahaiProofBytes, usedYBytes, usedVSBytes)
 

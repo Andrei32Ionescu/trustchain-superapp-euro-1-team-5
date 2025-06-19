@@ -1,17 +1,21 @@
 createDepositedEurosTable:
 CREATE TABLE IF NOT EXISTS DepositedEuros (
         serialNumber TEXT NOT NULL,
+        amount INTEGER NOT NULL,  -- Add amount field
         firstTheta1 BLOB NOT NULL,
         signature BLOB NOT NULL,
         proofs BLOB
 );
 
 insertDepositedEuro:
-INSERT INTO DepositedEuros(serialNumber,
+INSERT INTO DepositedEuros(
+    serialNumber,
+    amount,     -- Add amount field
     firstTheta1,
     signature,
     proofs)
 VALUES (?,
+    ?,          -- Add amount parameter
     ?,
     ?,
     ?

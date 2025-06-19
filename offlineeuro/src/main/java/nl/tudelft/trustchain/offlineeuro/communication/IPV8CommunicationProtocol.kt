@@ -37,6 +37,7 @@ import nl.tudelft.trustchain.offlineeuro.entity.User
 import nl.tudelft.trustchain.offlineeuro.enums.Role
 import nl.tudelft.trustchain.offlineeuro.libraries.GrothSahaiSerializer
 import java.math.BigInteger
+import android.util.Log
 
 class IPV8CommunicationProtocol(
     val addressBookManager: AddressBookManager,
@@ -96,10 +97,11 @@ class IPV8CommunicationProtocol(
     override fun requestBlindSignature(
         publicKey: Element,
         bankName: String,
-        challenge: BigInteger
+        challenge: BigInteger,
+        amount: Long
     ): BigInteger {
         val bankAddress = addressBookManager.getAddressByName(bankName)
-        community.getBlindSignature(challenge, publicKey.toBytes(), bankAddress.peerPublicKey!!)
+        community.getBlindSignature(challenge, publicKey.toBytes(),bankAddress.peerPublicKey!!,amount)
 
         val replyMessage = waitForMessage(CommunityMessageType.BlindSignatureReplyMessage) as BlindSignatureReplyMessage
         return replyMessage.signature
@@ -125,6 +127,8 @@ class IPV8CommunicationProtocol(
             peerAddress.peerPublicKey!!,
             transactionDetails.toTransactionDetailsBytes()
         )
+        // Log.d("IPV8Protocol", "Sent transaction details to $userNameReceiver")
+
         val message = waitForMessage(CommunityMessageType.TransactionResultMessage) as TransactionResultMessage
         return message.result
     }
@@ -215,7 +219,8 @@ class IPV8CommunicationProtocol(
 
         val publicKey = bank.group.gElementFromBytes(message.publicKeyBytes)
         val challenge = message.challenge
-        val signature = bank.createBlindSignature(challenge, publicKey)
+        val amount = message.amount
+        val signature = bank.createBlindSignature(challenge, publicKey,amount)
         val requestingPeer = message.peer
         community.sendBlindSignature(signature, requestingPeer)
     }

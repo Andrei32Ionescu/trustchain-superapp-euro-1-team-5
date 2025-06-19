@@ -28,7 +28,8 @@ interface ICommunicationProtocol {
     fun requestBlindSignature(
         publicKey: Element,
         bankName: String,
-        challenge: BigInteger
+        challenge: BigInteger,
+        amount: Long
     ): BigInteger
 
     fun requestTransactionRandomness(

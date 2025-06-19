@@ -11,7 +11,9 @@ data class WalletEntry(
     val digitalEuro: DigitalEuro,
     val t: Element,
     val transactionSignature: SchnorrSignature?,
-    val timesSpent: Long = 0
+    val timesSpent: Long = 0,
+    val receivedTimestamp: Long = System.currentTimeMillis(),
+    val transferCount: Int = 0
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -21,7 +23,29 @@ data class WalletEntry(
         return this.digitalEuro == other.digitalEuro &&
             this.t == other.t &&
             this.transactionSignature == other.transactionSignature &&
-            this.timesSpent == other.timesSpent
+            this.timesSpent == other.timesSpent &&
+            this.receivedTimestamp == other.receivedTimestamp &&
+            this.transferCount == other.transferCount
+    }
+
+    fun calculateTransactionFee(): Double {
+        val currentTime = System.currentTimeMillis()
+        val timeInWallet = (currentTime - receivedTimestamp) / (1000 * 60 * 60)
+
+        var fee = 0.01
+
+        fee += (timeInWallet / 24) * 0.005
+
+        fee += transferCount * 0.01
+
+        return minOf(fee, 0.50)
+    }
+
+    fun getValueAfterFee(): Long {
+        val fee = calculateTransactionFee()
+        val left = (digitalEuro.amount.toFloat() * (1.00-fee)).toLong()
+
+        return left
     }
 }
 
@@ -56,27 +80,113 @@ class Wallet(
     fun getAllWalletEntriesToSpend(): List<WalletEntry> {
         return walletManager.getWalletEntriesToSpend()
     }
+    fun getAllWalletEntriesToDoubleSpend(): List<WalletEntry>{
+        return walletManager.getWalletEntriesToDoubleSpend()
+    }
+    // Spend a specific wallet entry by its digital euro
+    fun spendSpecificEuro(
+        digitalEuro: DigitalEuro,
+        randomizationElements: RandomizationElements,
+        bilinearGroup: BilinearGroup,
+        crs: CRS,
+        deposit: Boolean
+    ): TransactionDetails? {
+        val walletEntry = walletManager.getWalletEntryByDigitalEuro(digitalEuro) ?: return null
+
+        // Check if this token is spendable (not already spent)
+        if (walletEntry.timesSpent > 0) return null
+
+        walletManager.incrementTimesSpent(digitalEuro)
+        walletManager.incrementTransferCount(digitalEuro)
+
+        if (deposit == true) {
+            return Transaction.createTransaction(privateKey, publicKey, walletEntry, randomizationElements, bilinearGroup, crs)
+        }
+
+        // Calculate the fee and update the value
+        val valueAfterFee = walletEntry.getValueAfterFee()
+
+        // Create a new digital euro with the updated value
+        val updatedEuro = digitalEuro.copy(amount = valueAfterFee)
+
+        val updatedEntry = walletEntry.copy(digitalEuro = updatedEuro)
+
+        return Transaction.createTransaction(privateKey, publicKey, updatedEntry, randomizationElements, bilinearGroup, crs)
+    }
+
+    // Double spend a specific wallet entry by its digital euro
+    fun doubleSpendSpecificEuro(
+        digitalEuro: DigitalEuro,
+        randomizationElements: RandomizationElements,
+        bilinearGroup: BilinearGroup,
+        crs: CRS,
+        deposit: Boolean
+    ): TransactionDetails? {
+        val walletEntry = walletManager.getWalletEntryByDigitalEuro(digitalEuro) ?: return null
+        // Check if this token can be double spent (spent exactly once)
+        if (walletEntry.timesSpent != 1L) return null
+
+        walletManager.incrementTimesSpent(digitalEuro)
+
+        if (deposit == true) {
+            return Transaction.createTransaction(privateKey, publicKey, walletEntry, randomizationElements, bilinearGroup, crs)
+        }
+
+        // Calculate the fee and update the value
+        val valueAfterFee = walletEntry.getValueAfterFee()
+
+        // Create a new digital euro with the updated value
+        val updatedEuro = digitalEuro.copy(amount = valueAfterFee)
+        val updatedEntry = walletEntry.copy( digitalEuro = updatedEuro )
+
+        return Transaction.createTransaction(privateKey, publicKey, updatedEntry, randomizationElements, bilinearGroup, crs)
+    }
 
     fun spendEuro(
         randomizationElements: RandomizationElements,
         bilinearGroup: BilinearGroup,
-        crs: CRS
+        crs: CRS,
+        deposit: Boolean
     ): TransactionDetails? {
         val walletEntry = walletManager.getNumberOfWalletEntriesToSpend(1).firstOrNull() ?: return null
         val euro = walletEntry.digitalEuro
         walletManager.incrementTimesSpent(euro)
-        return Transaction.createTransaction(privateKey, publicKey, walletEntry, randomizationElements, bilinearGroup, crs)
+        walletManager.incrementTransferCount(euro)
+
+        if (deposit == true) {
+            return Transaction.createTransaction(privateKey, publicKey, walletEntry, randomizationElements, bilinearGroup, crs)
+        }
+
+        // Calculate the fee and update the value
+        val valueAfterFee = walletEntry.getValueAfterFee()
+
+        // Create a new digital euro with the updated value
+        val updatedEuro = euro.copy(amount = valueAfterFee)
+        val updatedEntry = walletEntry.copy( digitalEuro = updatedEuro )
+
+        return Transaction.createTransaction(privateKey, publicKey, updatedEntry, randomizationElements, bilinearGroup, crs)
     }
 
     fun doubleSpendEuro(
         randomizationElements: RandomizationElements,
         bilinearGroup: BilinearGroup,
-        crs: CRS
+        crs: CRS,
+        deposit: Boolean
     ): TransactionDetails? {
         val walletEntry = walletManager.getNumberOfWalletEntriesToDoubleSpend(1).firstOrNull() ?: return null
         val euro = walletEntry.digitalEuro
         walletManager.incrementTimesSpent(euro)
 
-        return Transaction.createTransaction(privateKey, publicKey, walletEntry, randomizationElements, bilinearGroup, crs)
+        if (deposit == true) {
+            return Transaction.createTransaction(privateKey, publicKey, walletEntry, randomizationElements, bilinearGroup, crs)
+        }
+
+        val valueAfterFee = walletEntry.getValueAfterFee()
+
+        // Create a new digital euro with the updated value
+        val updatedEuro = euro.copy(amount = valueAfterFee)
+        val updatedEntry = walletEntry.copy( digitalEuro = updatedEuro )
+
+        return Transaction.createTransaction(privateKey, publicKey, updatedEntry, randomizationElements, bilinearGroup, crs)
     }
 }

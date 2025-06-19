@@ -125,10 +125,10 @@ class PerformanceTest {
             addMessageToList(user, randomnessReplyMessage)
 
             // Request the signature
-            Mockito.`when`(userCommunity.getBlindSignature(challengeCaptor.capture(), any(), any()))
+            Mockito.`when`(userCommunity.getBlindSignature(challengeCaptor.capture(), any(), any(), eq(200L)))
                 .then {
                     val challenge = challengeCaptor.lastValue
-                    val signatureRequestMessage = BlindSignatureRequestMessage(challenge, publicKeyBytes, userPeer)
+                    val signatureRequestMessage = BlindSignatureRequestMessage(challenge, publicKeyBytes, 200L, userPeer)
                     bankCommunity.messageList.add(signatureRequestMessage)
 
                     verify(bankCommunity, Mockito.atLeastOnce()).sendBlindSignature(challengeCaptor.capture(), any())
@@ -139,11 +139,11 @@ class PerformanceTest {
                 }
         }
 
-        val withdrawnEuro = user.withdrawDigitalEuro(bankName)
+        val withdrawnEuro = user.withdrawDigitalEuro(bankName, 200L)
 
         // User must make two requests
         verify(userCommunity, Mockito.atLeastOnce()).getBlindSignatureRandomness(publicKeyBytes, bank.name.toByteArray())
-        verify(userCommunity, Mockito.atLeastOnce()).getBlindSignature(any(), eq(publicKeyBytes), eq(bank.name.toByteArray()))
+        verify(userCommunity, Mockito.atLeastOnce()).getBlindSignature(any(), eq(publicKeyBytes), eq(bank.name.toByteArray()), eq(200L))
 
         // Bank must respond twice
         verify(bankCommunity, Mockito.atLeastOnce()).sendBlindSignatureRandomnessReply(any(), eq(userPeer))
