@@ -1,6 +1,5 @@
 package nl.tudelft.trustchain.offlineeuro.community
 
-import android.util.Log
 import nl.tudelft.ipv8.Overlay
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.ipv8.attestation.trustchain.TrustChainCommunity

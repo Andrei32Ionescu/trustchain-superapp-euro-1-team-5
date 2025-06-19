@@ -1,6 +1,5 @@
 package nl.tudelft.trustchain.offlineeuro.communication
 
-import android.util.Log
 import it.unisa.dia.gas.jpbc.Element
 import nl.tudelft.trustchain.offlineeuro.community.OfflineEuroCommunity
 import nl.tudelft.trustchain.offlineeuro.community.message.AddressMessage
