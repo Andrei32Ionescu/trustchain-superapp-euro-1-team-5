@@ -1,7 +1,3 @@
--- DepositedEuros.sq
--- =========================================================
--- TABLE & DDL
--- =========================================================
 createDepositedEurosTable:
 CREATE TABLE IF NOT EXISTS DepositedEuros (
     serialNumber        TEXT    NOT NULL,
@@ -16,9 +12,6 @@ CREATE TABLE IF NOT EXISTS DepositedEuros (
     amountSignature     BLOB    NOT NULL
 );
 
--- =========================================================
--- INSERT
--- =========================================================
 insertDepositedEuro:
 INSERT INTO DepositedEuros (
     serialNumber,
@@ -44,14 +37,10 @@ INSERT INTO DepositedEuros (
     ?   -- amountSignature
 );
 
--- =========================================================
--- EXACT MATCH LOOK-UP BY “DESCRIPTOR”
--- =========================================================
 getDepositedEuroByDescriptor:
 SELECT *
 FROM   DepositedEuros
 WHERE  serialNumber        = ?
-  AND  amount              = ?
   AND  firstTheta1         = ?
   AND  signature           = ?
   AND  timestamp           = ?
@@ -60,9 +49,6 @@ WHERE  serialNumber        = ?
   AND  bankKeySignature    = ?
   AND  amountSignature     = ?;
 
--- =========================================================
--- FULL TABLE FETCH & CLEAR
--- =========================================================
 getDepositedEuros:
 SELECT * FROM DepositedEuros;
 

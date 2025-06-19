@@ -14,6 +14,7 @@ import org.junit.Before
 import org.junit.Test
 import java.math.BigInteger
 import java.util.UUID
+import kotlin.random.Random
 
 class WalletManagerTest {
     private val driver =
@@ -39,16 +40,18 @@ class WalletManagerTest {
     }
 
     private fun getRandomWalletEntry(proofCount: Int): WalletEntry {
+        val fixedTimestamp = 30L
         val randomDigitalEuro =
             DigitalEuro(
                 UUID.randomUUID().toString(),
+                Random.nextLong(),
                 group.generateRandomElementOfG(),
                 generateRandomSignature(),
                 arrayListOf()
             )
 
         if (proofCount == 0) {
-            return WalletEntry(randomDigitalEuro, group.getRandomZr(), null)
+            return WalletEntry(randomDigitalEuro, group.getRandomZr(), null, receivedTimestamp = fixedTimestamp)
         }
 
         val signature = generateRandomSignature()
@@ -56,7 +59,7 @@ class WalletManagerTest {
             val proofToAdd = generateRandomInvalidProof()
             randomDigitalEuro.proofs.add(proofToAdd)
         }
-        return WalletEntry(randomDigitalEuro, group.getRandomZr(), signature)
+        return WalletEntry(randomDigitalEuro, group.getRandomZr(), signature, receivedTimestamp = fixedTimestamp)
     }
 
     @Test
@@ -65,15 +68,15 @@ class WalletManagerTest {
         walletManager.insertWalletEntry(walletEntry)
 
         val retrievedEntry = walletManager.getWalletEntryByDigitalEuro(walletEntry.digitalEuro)
-        Assert.assertEquals("The inserted and retrieved WalletEntry should be equal", walletEntry, retrievedEntry)
+        Assert.assertEquals("The inserted and retrieved WalletEntry should be equal", walletEntry, retrievedEntry!!.copy( receivedTimestamp = 30L ))
 
         val allEntries = walletManager.getAllDigitalWalletEntries()
         Assert.assertEquals("There should be on WalletEntry inserted", 1, allEntries.count())
-        Assert.assertEquals("There the WalletEntry should be equal", walletEntry, allEntries.first())
+        Assert.assertEquals("There the WalletEntry should be equal", walletEntry, allEntries.first().copy( receivedTimestamp = 30L ))
 
         val allUnspendEntries = walletManager.getWalletEntriesToSpend()
         Assert.assertEquals("The inserted wallet entry should not be spend", 1, allUnspendEntries.count())
-        Assert.assertEquals("There the WalletEntry not should be spend", walletEntry, allUnspendEntries.first())
+        Assert.assertEquals("There the WalletEntry not should be spend", walletEntry, allUnspendEntries.first().copy( receivedTimestamp = 30L ))
 
         val allSpentEntries = walletManager.getWalletEntriesToDoubleSpend()
         Assert.assertTrue("There should be no WalletEntry to double spend", allSpentEntries.isEmpty())
@@ -85,15 +88,16 @@ class WalletManagerTest {
         walletManager.insertWalletEntry(walletEntry)
 
         val retrievedEntry = walletManager.getWalletEntryByDigitalEuro(walletEntry.digitalEuro)
-        Assert.assertEquals("The inserted and retrieved WalletEntry should be equal", walletEntry, retrievedEntry)
+        val entry = retrievedEntry!!.copy( receivedTimestamp = 30L )
+        Assert.assertEquals("The inserted and retrieved WalletEntry should be equal", walletEntry, entry)
 
         val allEntries = walletManager.getAllDigitalWalletEntries()
         Assert.assertEquals("There should be one WalletEntry inserted", 1, allEntries.count())
-        Assert.assertEquals("There the WalletEntry should be equal", walletEntry, allEntries.first())
+        Assert.assertEquals("There the WalletEntry should be equal", walletEntry, allEntries.first().copy( receivedTimestamp = 30L ))
 
         val allUnspentEntries = walletManager.getWalletEntriesToSpend()
         Assert.assertEquals("The inserted WalletEntry should not be spend", 1, allUnspentEntries.count())
-        Assert.assertEquals("There the WalletEntry not should be spend", walletEntry, allUnspentEntries.first())
+        Assert.assertEquals("There the WalletEntry not should be spend", walletEntry, allUnspentEntries.first().copy( receivedTimestamp = 30L ))
 
         val allSpentEntries = walletManager.getWalletEntriesToDoubleSpend()
         Assert.assertTrue("There should be no WalletEntry to double spend", allSpentEntries.isEmpty())
@@ -157,13 +161,15 @@ class WalletManagerTest {
 
         val notSpendIndices = (0 until createdWalletEntries.size).filterNot { x -> spendIndices.contains(x) }
 
-        val notSpendEntries = walletManager.getWalletEntriesToSpend()
+        val notSpendEntries = walletManager.getWalletEntriesToSpend().map { it.copy(receivedTimestamp = 30) }
         val spendEntries = walletManager.getWalletEntriesToDoubleSpend()
 
         Assert.assertEquals("The number of spent tokens should be correct", spendIndices.size, spendEntries.size)
         Assert.assertEquals("The number of not spent tokens should be correct", notSpendIndices.size, notSpendEntries.size)
 
         val unspentTokens = notSpendIndices.map { createdWalletEntries[it] }
+        println(notSpendEntries)
+        println(unspentTokens)
         Assert.assertTrue("The unspent token list should be correct", notSpendEntries.containsAll(unspentTokens))
 
         // Compare spend entries on digital euro only as times spend does not change for the expected list

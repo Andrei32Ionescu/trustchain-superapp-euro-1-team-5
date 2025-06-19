@@ -61,11 +61,11 @@ class DepositedEuroManager(
         )
     }
 
+
     fun getDigitalEurosByDescriptor(digitalEuro: DigitalEuro): List<DigitalEuro> {
         val (serialNumber,amount, firstTheta1, signature, _, timestamp, hashSignature, bankPublicKey, bankKeySignature, amountSignature) = digitalEuro
         return queries.getDepositedEuroByDescriptor(
             serialNumber,
-            amount,
             firstTheta1.toBytes(),
             serialize(signature)!!,
             timestamp,

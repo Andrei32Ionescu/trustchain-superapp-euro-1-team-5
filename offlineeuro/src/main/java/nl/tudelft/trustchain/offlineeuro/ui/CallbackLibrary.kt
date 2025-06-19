@@ -59,7 +59,10 @@ object CallbackLibrary {
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         }
         val balanceField = view.findViewById<TextView>(R.id.user_home_balance)
-        balanceField.text = user.getBalance().toString()
+        balanceField.text = buildString {
+            append("€")
+            append((user.getBalance().toFloat() / 100.0).toString())
+        }
         // Update wallet tokens table
         val tokensList = view.findViewById<LinearLayout>(R.id.user_home_tokens_list)
         if (tokensList != null) {

@@ -5,6 +5,7 @@ import android.content.Context
 import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -17,6 +18,7 @@ import nl.tudelft.trustchain.offlineeuro.entity.User
 import nl.tudelft.trustchain.offlineeuro.entity.WalletEntry
 import nl.tudelft.trustchain.offlineeuro.enums.Role
 import java.time.LocalDateTime
+import kotlin.math.floor
 
 object TableHelpers {
     fun removeAllButFirstRow(table: LinearLayout) {
@@ -141,7 +143,7 @@ object TableHelpers {
         //Token amount field
         val amountField = TextView (styledContext).apply{
             layoutParams= layoutParams(0.2f)
-            text= "€${walletEntry.digitalEuro.amount}"
+            text= "€${walletEntry.digitalEuro.amount.toFloat()/100.0}"
         }
         // Token status field
         val statusField = TextView(styledContext).apply {
@@ -246,8 +248,18 @@ object TableHelpers {
                 }
             }
 
-            depositButton.text = "-"
-            depositButton.isEnabled = false
+            depositButton.text = "DS to Bank"
+            depositButton.setOnClickListener {
+                showBankSelectionDialog(context, user) { selectedBank ->
+                    try {
+                        val result = user.doubleSpendSpecificDigitalEuroTo(digitalEuro, selectedBank)
+                        Toast.makeText(context, "Doubly spent deposit: $result", Toast.LENGTH_SHORT).show()
+                    } catch (e: Exception) {
+                        Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            depositButton.isEnabled = true
         } else {
             // Already double spent - no actions available
             sendButton.text = "-"
@@ -385,12 +397,17 @@ object TableHelpers {
     ) {
         mainButton.text = "Withdraw"
         mainButton.setOnClickListener {
-            try {
-                val amount = 200L  // This should come from user input
-                val digitalEuro = user.withdrawDigitalEuro(bankName, amount)
-                Toast.makeText(context, "Successfully withdrawn €${digitalEuro.amount.toFloat()/100.0}", Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
-                Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
+            showWithdrawAmountDialog(context) { selectedAmount ->
+                try {
+                    val digitalEuro = user.withdrawDigitalEuro(bankName, selectedAmount)
+                    Toast.makeText(
+                        context,
+                        "Successfully withdrawn €${digitalEuro.amount.toFloat() / 100.0}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                } catch (e: Exception) {
+                    Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
+                }
             }
         }
 
@@ -405,6 +422,48 @@ object TableHelpers {
             }
         }
     }
+
+    private fun showWithdrawAmountDialog(context: Context, onAmountSelected: (Long) -> Unit) {
+        val options = arrayOf("€1", "€5", "€10", "€20", "€50", "Custom amount")
+
+        val builder = AlertDialog.Builder(context)
+        builder.setTitle("Select amount to withdraw")
+        builder.setItems(options) { dialog, which ->
+            when (which) {
+                0 -> onAmountSelected(100L)
+                1 -> onAmountSelected(500L)
+                2 -> onAmountSelected(1000L)
+                3 -> onAmountSelected(2000L)
+                4 -> onAmountSelected(5000L)
+                5 -> showCustomAmountDialog(context, onAmountSelected)
+            }
+        }
+        builder.show()
+    }
+
+    private fun showCustomAmountDialog(context: Context, onAmountEntered: (Long) -> Unit) {
+        val input = EditText(context).apply {
+            inputType = android.text.InputType.TYPE_CLASS_TEXT
+            hint = "Enter an amount (e.g, 7.50)"
+        }
+
+        AlertDialog.Builder(context)
+            .setTitle("Enter custom amount")
+            .setView(input)
+            .setPositiveButton("OK") { _, _ ->
+                val text = input.text.toString()
+                val amount = text.toDoubleOrNull()
+                if (amount != null && amount > 0) {
+                    val cents = (amount * 100).toLong()
+                    onAmountEntered(cents)
+                } else {
+                    Toast.makeText(context, "Invalid amount", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
 
     fun setUserActionButtons(
         mainButton: Button,

@@ -114,7 +114,7 @@ class TransactionTest {
         // Try with an invalid signature
         val fakeSignature =
             SchnorrSignature(BigInteger("1230284023820194821"), firstEuro.signature.encryption, firstEuro.signature.signedMessage)
-        val invalidEuro = DigitalEuro(firstEuro.serialNumber, firstEuro.firstTheta1, fakeSignature, firstEuro.proofs)
+        val invalidEuro = DigitalEuro(firstEuro.serialNumber, 200L, firstEuro.firstTheta1, fakeSignature, firstEuro.proofs)
         val invalidWalletEntry = WalletEntry(invalidEuro, walletEntry.t, walletEntry.transactionSignature, walletEntry.timesSpent)
         val invalidSignatureDetails = walletEntryToTransactionDetails(invalidWalletEntry)
         val invalidSignatureResult = Transaction.validate(invalidSignatureDetails, bank.publicKey, group, crs)
@@ -122,7 +122,7 @@ class TransactionTest {
         Assert.assertEquals(TransactionResult.INVALID_BANK_SIGNATURE.description, invalidSignatureResult.description)
 
         // Try with a different signature
-        val fakeEuro = DigitalEuro(firstEuro.serialNumber, firstEuro.firstTheta1, secondEuro.signature, firstEuro.proofs)
+        val fakeEuro = DigitalEuro(firstEuro.serialNumber, 100L, firstEuro.firstTheta1, secondEuro.signature, firstEuro.proofs)
         val fakeWalletEntry = WalletEntry(fakeEuro, walletEntry.t, walletEntry.transactionSignature, walletEntry.timesSpent)
         val transactionDetails = walletEntryToTransactionDetails(fakeWalletEntry)
         val verificationResult = Transaction.validate(transactionDetails, bank.publicKey, group, crs)
@@ -148,7 +148,7 @@ class TransactionTest {
         // Try with an invalid signature
         val fakeSignature =
             SchnorrSignature(BigInteger("1230284023820194821"), firstEuro.signature.encryption, firstEuro.signature.signedMessage)
-        val invalidEuro = DigitalEuro(firstEuro.serialNumber, firstEuro.firstTheta1, fakeSignature, firstEuro.proofs)
+        val invalidEuro = DigitalEuro(firstEuro.serialNumber, 200L, firstEuro.firstTheta1, fakeSignature, firstEuro.proofs)
         val invalidWalletEntry = WalletEntry(invalidEuro, walletEntry.t, walletEntry.transactionSignature, walletEntry.timesSpent)
         val invalidSignatureDetails = walletEntryToTransactionDetails(invalidWalletEntry)
         val invalidSignatureResult = Transaction.validate(invalidSignatureDetails, bank.publicKey, group, crs)
@@ -156,7 +156,7 @@ class TransactionTest {
         Assert.assertEquals(TransactionResult.INVALID_BANK_SIGNATURE.description, invalidSignatureResult.description)
 
         // Try with a different signature
-        val fakeEuro = DigitalEuro(firstEuro.serialNumber, firstEuro.firstTheta1, secondEuro.signature, firstEuro.proofs)
+        val fakeEuro = DigitalEuro(firstEuro.serialNumber, 200L, firstEuro.firstTheta1, secondEuro.signature, firstEuro.proofs)
         val fakeWalletEntry = WalletEntry(fakeEuro, walletEntry.t, walletEntry.transactionSignature, walletEntry.timesSpent)
         val transactionDetails = walletEntryToTransactionDetails(fakeWalletEntry)
         val verificationResult = Transaction.validate(transactionDetails, bank.publicKey, group, crs)
@@ -182,7 +182,7 @@ class TransactionTest {
         // Try with an invalid signature
         val fakeSignature =
             SchnorrSignature(BigInteger("1230284023820194821"), firstEuro.signature.encryption, firstEuro.signature.signedMessage)
-        val invalidEuro = DigitalEuro(firstEuro.serialNumber, firstEuro.firstTheta1, fakeSignature, firstEuro.proofs)
+        val invalidEuro = DigitalEuro(firstEuro.serialNumber, 200L, firstEuro.firstTheta1, fakeSignature, firstEuro.proofs)
         val invalidWalletEntry = WalletEntry(invalidEuro, walletEntry.t, walletEntry.transactionSignature, walletEntry.timesSpent)
         val invalidSignatureDetails = walletEntryToTransactionDetails(invalidWalletEntry)
         val invalidSignatureResult = Transaction.validate(invalidSignatureDetails, bank.publicKey, group, crs)
@@ -190,7 +190,7 @@ class TransactionTest {
         Assert.assertEquals(TransactionResult.INVALID_BANK_SIGNATURE.description, invalidSignatureResult.description)
 
         // Try with a different signature
-        val fakeEuro = DigitalEuro(firstEuro.serialNumber, firstEuro.firstTheta1, secondEuro.signature, firstEuro.proofs)
+        val fakeEuro = DigitalEuro(firstEuro.serialNumber, 200L, firstEuro.firstTheta1, secondEuro.signature, firstEuro.proofs)
         val fakeWalletEntry = WalletEntry(fakeEuro, walletEntry.t, walletEntry.transactionSignature, walletEntry.timesSpent)
         val transactionDetails = walletEntryToTransactionDetails(fakeWalletEntry)
         val verificationResult = Transaction.validate(transactionDetails, bank.publicKey, group, crs)
@@ -271,10 +271,10 @@ class TransactionTest {
             addMessageToList(user, randomnessReplyMessage)
 
             // Request the signature
-            Mockito.`when`(userCommunity.getBlindSignature(challengeCaptor.capture(), any(), any()))
+            Mockito.`when`(userCommunity.getBlindSignature(challengeCaptor.capture(), any(), any(), eq(200L)))
                 .then {
                     val challenge = challengeCaptor.lastValue
-                    val signatureRequestMessage = BlindSignatureRequestMessage(challenge, publicKeyBytes, userPeer)
+                    val signatureRequestMessage = BlindSignatureRequestMessage(challenge, publicKeyBytes, 200L, userPeer)
                     bankCommunity.messageList.add(signatureRequestMessage)
 
                     verify(bankCommunity, Mockito.atLeastOnce()).sendBlindSignature(challengeCaptor.capture(), any())
@@ -285,11 +285,11 @@ class TransactionTest {
                 }
         }
 
-        val withdrawnEuro = user.withdrawDigitalEuro(bankName)
+        val withdrawnEuro = user.withdrawDigitalEuro(bankName, 200L)
 
         // User must make two requests
         verify(userCommunity, Mockito.atLeastOnce()).getBlindSignatureRandomness(publicKeyBytes, bank.name.toByteArray())
-        verify(userCommunity, Mockito.atLeastOnce()).getBlindSignature(any(), eq(publicKeyBytes), eq(bank.name.toByteArray()))
+        verify(userCommunity, Mockito.atLeastOnce()).getBlindSignature(any(), eq(publicKeyBytes), eq(bank.name.toByteArray()), eq(200L))
 
         // Bank must respond twice
         verify(bankCommunity, Mockito.atLeastOnce()).sendBlindSignatureRandomnessReply(any(), eq(userPeer))

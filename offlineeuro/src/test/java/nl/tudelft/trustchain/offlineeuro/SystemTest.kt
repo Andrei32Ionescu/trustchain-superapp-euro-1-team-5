@@ -170,9 +170,9 @@ class SystemTest {
             addMessageToList(user, randomnessReplyMessage)
 
             // Request the signature
-            `when`(userCommunity.getBlindSignature(challengeCaptor.capture(), any(), any())).then {
+            `when`(userCommunity.getBlindSignature(challengeCaptor.capture(), any(), any(), eq(200L))).then {
                 val challenge = challengeCaptor.lastValue
-                val signatureRequestMessage = BlindSignatureRequestMessage(challenge, publicKeyBytes, userPeer)
+                val signatureRequestMessage = BlindSignatureRequestMessage(challenge, publicKeyBytes, 200L, userPeer)
                 bankCommunity.messageList.add(signatureRequestMessage)
 
                 verify(bankCommunity, atLeastOnce()).sendBlindSignature(challengeCaptor.capture(), any())
@@ -183,11 +183,11 @@ class SystemTest {
             }
         }
 
-        val withdrawnEuro = user.withdrawDigitalEuro(bankName)
+        val withdrawnEuro = user.withdrawDigitalEuro(bankName, 200L)
 
         // User must make two requests
         verify(userCommunity, atLeastOnce()).getBlindSignatureRandomness(publicKeyBytes, bank.name.toByteArray())
-        verify(userCommunity, atLeastOnce()).getBlindSignature(any(), eq(publicKeyBytes), eq(bank.name.toByteArray()))
+        verify(userCommunity, atLeastOnce()).getBlindSignature(any(), eq(publicKeyBytes), eq(bank.name.toByteArray()), eq(200L))
 
         // Bank must respond twice
         verify(bankCommunity, atLeastOnce()).sendBlindSignatureRandomnessReply(any(), eq(userPeer))
