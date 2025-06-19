@@ -5,6 +5,7 @@ import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import it.unisa.dia.gas.jpbc.Element
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.offlineeuro.sqldelight.Database
+import nl.tudelft.trustchain.offlineeuro.communication.ICommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.communication.IPV8CommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.community.OfflineEuroCommunity
 import nl.tudelft.trustchain.offlineeuro.community.message.AddressMessage
@@ -37,6 +38,9 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.verify
 import java.math.BigInteger
 import kotlin.math.floor
+import nl.tudelft.trustchain.offlineeuro.community.message.TransactionRandomizationElementsReplyMessage
+import nl.tudelft.trustchain.offlineeuro.community.message.TransactionResultMessage
+import nl.tudelft.trustchain.offlineeuro.entity.Address
 
 class TransactionTest {
     // Setup the TTP
@@ -56,6 +60,71 @@ class TransactionTest {
         // Initiate
         createTTP()
         createBank()
+    }
+
+    @Test
+    fun userSendDigitalEuroTo_success() {
+        // Sender & receiver
+        val sender   = createTestUser()
+        val receiver = createTestUser()
+        val receiverName = receiver.name
+
+        // Make sure sender knows receiver's address
+        val senderProtocol = sender.communicationProtocol as IPV8CommunicationProtocol
+        senderProtocol.addressBookManager.insertAddress(
+            Address(receiverName, Role.User, receiver.publicKey, receiverName.toByteArray())
+        )
+
+        // Give the sender one euro to spend
+        withdrawDigitalEuro(sender, bank.name)
+        val balanceBefore = sender.getBalance()
+
+        // Prepare randomisation elements & stub community calls
+        val randEl   = GrothSahai.tToRandomizationElements(group.getRandomZr(), group, crs)
+        val randElBs = randEl.toRandomizationElementsBytes()
+        val senderCommunity = userList[sender]!!
+
+        Mockito.`when`(senderCommunity.getTransactionRandomizationElements(any(), any())).then {
+            addMessageToList(sender, TransactionRandomizationElementsReplyMessage(randElBs))
+        }
+        Mockito.`when`(senderCommunity.sendTransactionDetails(any(), any(), any())).then {
+            addMessageToList(sender, TransactionResultMessage("Transaction successful"))
+        }
+
+        // Act
+        val result = sender.sendDigitalEuroTo(receiverName)
+
+        // Assert
+        Assert.assertEquals("Transaction successful", result)
+        Assert.assertTrue(sender.getBalance() < balanceBefore)
+        verify(senderCommunity, Mockito.atLeastOnce()).getTransactionRandomizationElements(any(), any())
+        verify(senderCommunity, Mockito.atLeastOnce()).sendTransactionDetails(any(), any(), any())
+    }
+
+    @Test
+    fun userSendDigitalEuroTo_noFunds() {
+        val sender   = createTestUser()
+        val receiver = createTestUser()
+        val receiverName = receiver.name
+
+        // Address entry for receiver
+        val senderProtocol = sender.communicationProtocol as IPV8CommunicationProtocol
+        senderProtocol.addressBookManager.insertAddress(
+            Address(receiverName, Role.User, receiver.publicKey, receiverName.toByteArray())
+        )
+
+        // Stub randomness request so it does not time-out
+        val randEl   = GrothSahai.tToRandomizationElements(group.getRandomZr(), group, crs)
+        val randElBs = randEl.toRandomizationElementsBytes()
+        val senderCommunity = userList[sender]!!
+        Mockito.`when`(senderCommunity.getTransactionRandomizationElements(any(), any())).then {
+            addMessageToList(sender, TransactionRandomizationElementsReplyMessage(randElBs))
+        }
+
+        // Act & Assert – expect "No euro to spend"
+        Assert.assertThrows(Exception::class.java) {
+            sender.sendDigitalEuroTo(receiverName)
+        }
     }
 
     @Test
