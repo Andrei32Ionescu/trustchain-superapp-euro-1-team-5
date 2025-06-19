@@ -31,7 +31,7 @@ data class WalletEntry(
     fun calculateTransactionFee(): Double {
         val currentTime = System.currentTimeMillis()
         val referenceTimestamp = digitalEuro.withdrawalTimestamp
-        val timePassed = (currentTime - referenceTimestamp) / (1000 * 60 * 60)
+        val timePassed = (currentTime - referenceTimestamp) / (1000.0 * 60 * 60)
         Log.d("Wallet", "Transaction Info:")
         Log.d("Wallet", "Time passed: $timePassed")
         val currentTransferCount = calculateTransferCount()
