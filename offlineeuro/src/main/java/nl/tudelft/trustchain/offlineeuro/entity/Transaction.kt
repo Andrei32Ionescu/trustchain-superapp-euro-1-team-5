@@ -219,7 +219,7 @@ object Transaction {
         // Only validate amount matching for non-deposits
         if (!isDeposit) {
             // Verify the signed amount is currently of the expected value
-            if (digitalEuro.amount != getValueAfterFee(digitalEuro)) {
+            if (digitalEuro.amount >= getValueAfterFee(digitalEuro) && digitalEuro.amount <= getValueUpperBound(digitalEuro)) {
                 Log.d("OfflineEuro", "Bank amount mismatch: ${digitalEuro.amount} != ${getValueAfterFee(digitalEuro)}")
                 return false
             }
@@ -235,14 +235,38 @@ object Transaction {
         return left
     }
 
+    fun getValueUpperBound(digitalEuro: DigitalEuro): Long {
+        val fee = calculateUpperBound(digitalEuro)
+        val left = (String(digitalEuro.amountSignature.signedMessage, Charsets.UTF_8).toFloat() * (1.00-fee)).toLong()
+
+        return left
+    }
+
     fun calculateTransactionFee(digitalEuro: DigitalEuro): Double {
         val currentTime = System.currentTimeMillis()
         val referenceTimestamp = digitalEuro.withdrawalTimestamp
-        val timePassed = (currentTime - referenceTimestamp) / (1000 * 60 * 60)
+        val timePassed = (currentTime - referenceTimestamp) / (1000.0 * 60 * 60)
 
         val currentTransferCount = calculateTransferCount(digitalEuro)
 
-        var fee = (timePassed / 24) * 0.005
+        var fee = (timePassed/ 24.0) * 0.05
+
+        // No fee for the first 3 transactions
+        if (currentTransferCount > 2) {
+            fee += (currentTransferCount - 2) * 0.05
+        }
+
+        return fee
+    }
+
+    fun calculateUpperBound(digitalEuro: DigitalEuro): Double {
+        val currentTime = System.currentTimeMillis() - 10000
+        val referenceTimestamp = digitalEuro.withdrawalTimestamp
+        val timePassed = (currentTime - referenceTimestamp) / (1000.0 * 60 * 60)
+
+        val currentTransferCount = calculateTransferCount(digitalEuro)
+
+        var fee = (timePassed/ 24.0) * 0.05
 
         // No fee for the first 3 transactions
         if (currentTransferCount > 2) {

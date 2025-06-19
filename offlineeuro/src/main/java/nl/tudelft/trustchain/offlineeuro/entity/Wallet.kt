@@ -32,11 +32,12 @@ data class WalletEntry(
         val currentTime = System.currentTimeMillis()
         val referenceTimestamp = digitalEuro.withdrawalTimestamp
         val timePassed = (currentTime - referenceTimestamp) / (1000 * 60 * 60)
-
+        Log.d("Wallet", "Transaction Info:")
+        Log.d("Wallet", "Time passed: $timePassed")
         val currentTransferCount = calculateTransferCount()
 
-        var fee = (timePassed / 24) * 0.005
-
+        var fee = (timePassed / 24.0) * 0.05
+        Log.d("Wallet", "Calculated fee: $fee")
         // No fee for the first 3 transactions
         if (currentTransferCount > 2) {
             fee += (currentTransferCount - 2) * 0.05
@@ -102,7 +103,7 @@ class Wallet(
         val walletEntry = walletManager.getWalletEntryByDigitalEuro(digitalEuro) ?: return null
 
         // Check if this token is spendable (not already spent)
-        if (walletEntry.timesSpent > 0) return null
+//        if (walletEntry.timesSpent > 0) return null
 
         Log.d("Wallet", "Spending euro with times spent: ${walletEntry.timesSpent}")
         println("Spending euro with times spent: ${walletEntry.timesSpent}")
@@ -114,6 +115,8 @@ class Wallet(
 
         // Calculate the fee and update the value
         val valueAfterFee = walletEntry.getValueAfterFee()
+
+        Log.d("Wallet", "Spending euro with times spent: ${walletEntry.timesSpent}, value after fee: $valueAfterFee")
 
         // Create a new digital euro with the updated value
         val updatedEuro = digitalEuro.copy(amount = valueAfterFee)
@@ -171,6 +174,8 @@ class Wallet(
         // Create a new digital euro with the updated value
         val updatedEuro = euro.copy(amount = valueAfterFee)
         val updatedEntry = walletEntry.copy( digitalEuro = updatedEuro )
+
+        Log.d("Wallet", "Spending euro with times spent: ${walletEntry.timesSpent}, value after fee: $valueAfterFee")
 
         return Transaction.createTransaction(privateKey, publicKey, updatedEntry, randomizationElements, bilinearGroup, crs)
     }
