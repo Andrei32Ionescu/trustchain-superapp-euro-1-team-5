@@ -48,7 +48,7 @@ class WalletManager(
             group.zrElementFromBytes(secretT),
             deserializeSchnorr(transactionSignature),
             timesSpent,
-            timestamp
+            System.currentTimeMillis()
             )
     }
 
