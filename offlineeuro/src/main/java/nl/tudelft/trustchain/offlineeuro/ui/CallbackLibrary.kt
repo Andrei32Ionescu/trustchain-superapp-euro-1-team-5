@@ -59,6 +59,7 @@ object CallbackLibrary {
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         }
         val balanceField = view.findViewById<TextView>(R.id.user_home_balance)
+
         balanceField.text = buildString {
             append("€")
             append((user.getBalance().toFloat() / 100.0).toString())

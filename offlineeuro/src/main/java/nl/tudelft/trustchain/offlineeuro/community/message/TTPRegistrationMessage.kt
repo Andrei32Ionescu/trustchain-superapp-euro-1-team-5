@@ -6,7 +6,7 @@ import nl.tudelft.trustchain.offlineeuro.enums.Role
 class TTPRegistrationMessage(
     val userName: String,
     val userPKBytes: ByteArray,
-    val peerPublicKeyBytes: ByteArray,
+    val overlayPK: ByteArray,
     val role: Role,
     val requestingPeer: Peer
 ) : ICommunityMessage {

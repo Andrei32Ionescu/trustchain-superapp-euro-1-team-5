@@ -5,6 +5,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.Toast
+import kotlinx.coroutines.*
 import nl.tudelft.trustchain.offlineeuro.R
 import nl.tudelft.trustchain.offlineeuro.communication.IPV8CommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.community.OfflineEuroCommunity
@@ -16,6 +17,7 @@ import nl.tudelft.trustchain.offlineeuro.entity.Bank
 import nl.tudelft.trustchain.offlineeuro.entity.TTP
 import nl.tudelft.trustchain.offlineeuro.entity.User
 import nl.tudelft.trustchain.offlineeuro.enums.Role
+import okhttp3.*
 
 class AllRolesFragment : OfflineEuroBaseFragment(R.layout.fragment_all_roles_home) {
     private lateinit var iPV8CommunicationProtocol: IPV8CommunicationProtocol
@@ -61,12 +63,15 @@ class AllRolesFragment : OfflineEuroBaseFragment(R.layout.fragment_all_roles_hom
         ParticipantHolder.user = user
 
         iPV8CommunicationProtocol.participant = ttp
+        ttp.registeredUserManager.addRegisteredUser(user.name, user.publicKey, "test")
+        ttp.registeredUserManager.addRegisteredUser(bank.name, bank.publicKey,"bank")
+//        ttp.registerUser(user.name, user.publicKey, user.publicKey.toBytes())
+//        ttp.registerUser(bank.name, bank.publicKey, user.publicKey.toBytes())
 
-        ttp.registerUser(user.name, user.publicKey, Role.User)
-        val (success, bankSignature) = ttp.registerUser(bank.name, bank.publicKey, Role.Bank)
-        if (bankSignature != null && bank is Bank) {
-            bank.ttpSignatureOnPublicKey = bankSignature  // Store the signature in the bank
-        }
+//        val (success, bankSignature) = ttp.registerUser(bank.name, bank.publicKey, Role.Bank)
+//        if (bankSignature != null && bank is Bank) {
+//            bank.ttpSignatureOnPublicKey = bankSignature  // Store the signature in the bank
+//        }
 
         iPV8CommunicationProtocol.addressBookManager.insertAddress(Address(bank.name, Role.Bank, bank.publicKey, null))
         iPV8CommunicationProtocol.addressBookManager.insertAddress(Address(user.name, Role.User, user.publicKey, null))
@@ -81,6 +86,8 @@ class AllRolesFragment : OfflineEuroBaseFragment(R.layout.fragment_all_roles_hom
         val ttpButton = view.findViewById<Button>(R.id.all_roles_set_ttp)
         val bankButton = view.findViewById<Button>(R.id.all_roles_set_bank)
         val userButton = view.findViewById<Button>(R.id.all_roles_set_user)
+        val eudiButton = view.findViewById<Button>(R.id.all_roles_eudi_button)
+
         ttpButton.setOnClickListener {
             ttpButton.isEnabled = false
             bankButton.isEnabled = true

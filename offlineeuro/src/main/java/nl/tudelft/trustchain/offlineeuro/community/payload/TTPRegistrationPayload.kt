@@ -9,13 +9,15 @@ import nl.tudelft.trustchain.offlineeuro.enums.Role
 class TTPRegistrationPayload(
     val userName: String,
     val publicKey: ByteArray,
-    val role : Role
+    val overlayPublicKey: ByteArray,
+    val role : Role,
 ) : Serializable {
     override fun serialize(): ByteArray {
         var payload = ByteArray(0)
         payload += serializeVarLen(userName.toByteArray())
         payload += serializeVarLen(publicKey)
         payload += serializeVarLen(byteArrayOf(role.ordinal.toByte()))
+        payload += serializeVarLen(overlayPublicKey)
         return payload
     }
 
@@ -32,11 +34,14 @@ class TTPRegistrationPayload(
             localOffset += publicKeyBytesSize
             val (roleBytes, roleBytesSize) = deserializeVarLen(buffer, localOffset)
             localOffset += roleBytesSize
+            val (overlayPKBytes, overlayPKSize) = deserializeVarLen(buffer, localOffset)
+            localOffset += overlayPKSize
 
             return Pair(
                 TTPRegistrationPayload(
                     nameBytes.toString(Charsets.UTF_8),
                     publicKeyBytes,
+                    overlayPKBytes,
                     Role.entries[roleBytes[0].toInt()]
                 ),
                 localOffset - offset

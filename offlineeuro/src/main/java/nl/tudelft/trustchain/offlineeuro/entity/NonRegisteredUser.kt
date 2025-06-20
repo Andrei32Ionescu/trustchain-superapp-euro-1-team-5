@@ -2,9 +2,10 @@ package nl.tudelft.trustchain.offlineeuro.entity
 
 import it.unisa.dia.gas.jpbc.Element
 
-data class RegisteredUser(
+data class NonRegisteredUser(
     val id: Long,
     val name: String,
     val publicKey: Element,
-    val legalName: String
+    val transactionId: String,
+    val overlayPK: ByteArray
 )

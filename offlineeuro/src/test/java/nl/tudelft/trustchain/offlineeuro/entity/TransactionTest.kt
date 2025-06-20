@@ -1,9 +1,11 @@
 package nl.tudelft.trustchain.offlineeuro.entity
 
+import android.util.Log
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import it.unisa.dia.gas.jpbc.Element
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.offlineeuro.sqldelight.Database
+import nl.tudelft.trustchain.offlineeuro.communication.ICommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.communication.IPV8CommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.community.OfflineEuroCommunity
 import nl.tudelft.trustchain.offlineeuro.community.message.AddressMessage
@@ -21,6 +23,7 @@ import nl.tudelft.trustchain.offlineeuro.cryptography.Schnorr
 import nl.tudelft.trustchain.offlineeuro.cryptography.SchnorrSignature
 import nl.tudelft.trustchain.offlineeuro.db.AddressBookManager
 import nl.tudelft.trustchain.offlineeuro.db.DepositedEuroManager
+import nl.tudelft.trustchain.offlineeuro.db.NonRegisteredUserManager
 import nl.tudelft.trustchain.offlineeuro.db.RegisteredUserManager
 import nl.tudelft.trustchain.offlineeuro.db.WalletManager
 import nl.tudelft.trustchain.offlineeuro.enums.Role
@@ -28,12 +31,16 @@ import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito
+import org.mockito.Mockito.`when`
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.verify
 import java.math.BigInteger
 import kotlin.math.floor
+import nl.tudelft.trustchain.offlineeuro.community.message.TransactionRandomizationElementsReplyMessage
+import nl.tudelft.trustchain.offlineeuro.community.message.TransactionResultMessage
+import nl.tudelft.trustchain.offlineeuro.entity.Address
 
 class TransactionTest {
     // Setup the TTP
@@ -53,6 +60,71 @@ class TransactionTest {
         // Initiate
         createTTP()
         createBank()
+    }
+
+    @Test
+    fun userSendDigitalEuroTo_success() {
+        // Sender & receiver
+        val sender   = createTestUser()
+        val receiver = createTestUser()
+        val receiverName = receiver.name
+
+        // Make sure sender knows receiver's address
+        val senderProtocol = sender.communicationProtocol as IPV8CommunicationProtocol
+        senderProtocol.addressBookManager.insertAddress(
+            Address(receiverName, Role.User, receiver.publicKey, receiverName.toByteArray())
+        )
+
+        // Give the sender one euro to spend
+        withdrawDigitalEuro(sender, bank.name)
+        val balanceBefore = sender.getBalance()
+
+        // Prepare randomisation elements & stub community calls
+        val randEl   = GrothSahai.tToRandomizationElements(group.getRandomZr(), group, crs)
+        val randElBs = randEl.toRandomizationElementsBytes()
+        val senderCommunity = userList[sender]!!
+
+        Mockito.`when`(senderCommunity.getTransactionRandomizationElements(any(), any())).then {
+            addMessageToList(sender, TransactionRandomizationElementsReplyMessage(randElBs))
+        }
+        Mockito.`when`(senderCommunity.sendTransactionDetails(any(), any(), any())).then {
+            addMessageToList(sender, TransactionResultMessage("Transaction successful"))
+        }
+
+        // Act
+        val result = sender.sendDigitalEuroTo(receiverName)
+
+        // Assert
+        Assert.assertEquals("Transaction successful", result)
+        Assert.assertTrue(sender.getBalance() < balanceBefore)
+        verify(senderCommunity, Mockito.atLeastOnce()).getTransactionRandomizationElements(any(), any())
+        verify(senderCommunity, Mockito.atLeastOnce()).sendTransactionDetails(any(), any(), any())
+    }
+
+    @Test
+    fun userSendDigitalEuroTo_noFunds() {
+        val sender   = createTestUser()
+        val receiver = createTestUser()
+        val receiverName = receiver.name
+
+        // Address entry for receiver
+        val senderProtocol = sender.communicationProtocol as IPV8CommunicationProtocol
+        senderProtocol.addressBookManager.insertAddress(
+            Address(receiverName, Role.User, receiver.publicKey, receiverName.toByteArray())
+        )
+
+        // Stub randomness request so it does not time-out
+        val randEl   = GrothSahai.tToRandomizationElements(group.getRandomZr(), group, crs)
+        val randElBs = randEl.toRandomizationElementsBytes()
+        val senderCommunity = userList[sender]!!
+        Mockito.`when`(senderCommunity.getTransactionRandomizationElements(any(), any())).then {
+            addMessageToList(sender, TransactionRandomizationElementsReplyMessage(randElBs))
+        }
+
+        // Act & Assert – expect "No euro to spend"
+        Assert.assertThrows(Exception::class.java) {
+            sender.sendDigitalEuroTo(receiverName)
+        }
     }
 
     @Test
@@ -336,12 +408,13 @@ class TransactionTest {
     private fun createTTP() {
         val addressBookManager = createAddressManager(group)
         val registeredUserManager = RegisteredUserManager(null, group, createDriver())
+        val nonRegisteredUserManager = NonRegisteredUserManager(null,group,createDriver())
 
         val ttpCommunity = prepareCommunityMock()
         val communicationProtocol = IPV8CommunicationProtocol(addressBookManager, ttpCommunity)
 
         Mockito.`when`(ttpCommunity.messageList).thenReturn(communicationProtocol.messageList)
-        ttp = TTP("TTP", group, communicationProtocol, null, registeredUserManager)
+        ttp = TTP("TTP", group, communicationProtocol, null, registeredUserManager,nonRegisteredUserManager)
         crs = ttp.crs
         communicationProtocol.participant = ttp
     }
@@ -359,7 +432,9 @@ class TransactionTest {
         bank.generateKeyPair()
         bankCommunity = community
         communicationProtocol.participant = bank
-        ttp.registerUser(bank.name, bank.publicKey)
+        //ttp.registerUser(bank.name, bank.publicKey, "", bank.publicKey.toBytes())
+        ttp.registeredUserManager.addRegisteredUser(bank.name, bank.publicKey, "testBank")
+
     }
 
     private fun createAddressManager(group: BilinearGroup): AddressBookManager {

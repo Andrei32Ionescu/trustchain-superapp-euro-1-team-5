@@ -8,8 +8,9 @@ class TTPRegistrationPayloadTest {
     fun serializeAndDeserializeTest() {
         val name = "NameForUserThatIsTryingToRegister"
         val publicKeyBytes = "NotAPublicKeyButJustSomeBytes".toByteArray()
+        val txId = "mockId"
 
-        val serializedPayload = TTPRegistrationPayload(name, publicKeyBytes).serialize()
+        val serializedPayload = TTPRegistrationPayload(name, publicKeyBytes, txId.toByteArray()).serialize()
         val deserializedPayload = TTPRegistrationPayload.deserialize(serializedPayload).first
         val deserializedName = deserializedPayload.userName
         val deserializedPublicKey = deserializedPayload.publicKey

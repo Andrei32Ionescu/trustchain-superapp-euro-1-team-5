@@ -68,12 +68,20 @@ object TableHelpers {
         val publicKeyField =
             TextView(context).apply {
                 text = user.publicKey.toString()
-                layoutParams = layoutParams(0.7f)
+                layoutParams = layoutParams(0.4f)
+            }
+        val legalNameField =
+            TextView(context).apply {
+                text = user.legalName
+                layoutParams = layoutParams(0.2f)
+                gravity = Gravity.CENTER_HORIZONTAL
             }
 
         layout.addView(idField)
         layout.addView(nameField)
+        layout.addView(legalNameField)
         layout.addView(publicKeyField)
+
         return layout
     }
 

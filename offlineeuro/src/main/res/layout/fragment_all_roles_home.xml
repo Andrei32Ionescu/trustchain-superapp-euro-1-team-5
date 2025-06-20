@@ -74,5 +74,12 @@
             android:layout_height="match_parent"
             android:layout_weight="0.1"
             />
+
+        <Button
+            android:id="@+id/all_roles_eudi_button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Open EUDI"
+            android:layout_weight="0.3"/>
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>
