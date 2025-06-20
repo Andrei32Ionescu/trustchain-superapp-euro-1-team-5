@@ -8,8 +8,11 @@ CREATE TABLE IF NOT EXISTS Wallet (
     secretT BLOB NOT NULL,
     transactionSignature BLOB,
     timesSpent INTEGER NOT NULL,
-    receivedTimestamp INTEGER NOT NULL DEFAULT (strftime('%s','now')),
-    transferCount INTEGER NOT NULL DEFAULT 0
+    timestamp INTEGER NOT NULL,
+    hashSignature BLOB NOT NULL,
+    bankPublicKey BLOB NOT NULL,
+    bankKeySignature BLOB NOT NULL,
+    amountSignature BLOB NOT NULL
 );
 
 insertWalletEntry:
@@ -21,9 +24,14 @@ INSERT INTO Wallet(
     previousProofs,
     secretT,
     transactionSignature,
-    timesSpent
+    timesSpent,
+    timestamp,
+    hashSignature,
+    bankPublicKey,
+    bankKeySignature,
+    amountSignature
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, 0);
+VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?,?);
 
 getWalletEntryByDescriptor:
 SELECT *
@@ -59,11 +67,6 @@ WHERE timesSpent = 1;
 incrementTimesSpent:
 UPDATE Wallet
 SET timesSpent = timesSpent + 1
-WHERE serialNumber = ? AND firstTheta1 = ? AND signature = ? AND previousProofs IS ?;
-
-incrementTransferCount:
-UPDATE Wallet
-SET transferCount = transferCount + 1
 WHERE serialNumber = ? AND firstTheta1 = ? AND signature = ? AND previousProofs IS ?;
 
 clearWalletTable:

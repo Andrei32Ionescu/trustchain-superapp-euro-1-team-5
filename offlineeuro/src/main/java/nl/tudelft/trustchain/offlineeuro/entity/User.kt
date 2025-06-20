@@ -4,6 +4,8 @@ import android.content.Context
 
 import android.content.Intent
 import android.util.Log
+import android.widget.Toast
+import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.core.net.toUri
 
 import it.unisa.dia.gas.jpbc.Element
@@ -15,6 +17,7 @@ import nl.tudelft.trustchain.offlineeuro.communication.ICommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.cryptography.BilinearGroup
 import nl.tudelft.trustchain.offlineeuro.cryptography.Schnorr
 import nl.tudelft.trustchain.offlineeuro.db.WalletManager
+import nl.tudelft.trustchain.offlineeuro.enums.Role
 import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
@@ -39,9 +42,8 @@ class User(
     val onRegister: (() -> Unit)? = null,
     val onReqUserVerif: ((String, String) -> Unit)? = null,
     transactionId: String? = "",
-) : Participant(communicationProtocol, name, onDataChangeCallback) {
+) : Participant(communicationProtocol, name, onDataChangeCallback, Role.User) {
     val wallet: Wallet
-
 
     init {
         communicationProtocol.participant = this
@@ -68,6 +70,8 @@ class User(
         }
         val transactionDetails = wallet.spendSpecificEuro(digitalEuro, randomizationElements, group, crs, deposit)
             ?: throw Exception("Cannot spend this specific euro")
+
+        Log.d("TransactionDetails", transactionDetails.toString())
         val result = communicationProtocol.sendTransactionDetails(nameReceiver, transactionDetails)
         onDataChangeCallback?.invoke(result)
         return result
@@ -130,9 +134,30 @@ class User(
         val bankPublicKey = communicationProtocol.getPublicKeyOf(bank, group)
 
         val blindedChallenge = Schnorr.createBlindedChallenge(bankRandomness, bytesToSign, bankPublicKey, group)
-        val blindSignature = communicationProtocol.requestBlindSignature(publicKey, bank, blindedChallenge.blindedChallenge, amount)
-        val signature = Schnorr.unblindSignature(blindedChallenge, blindSignature)
-        val digitalEuro = DigitalEuro(serialNumber, amount, initialTheta, signature, arrayListOf())
+
+        val response = communicationProtocol.requestBlindSignature(
+            publicKey,
+            bank,
+            blindedChallenge.blindedChallenge,
+            amount,
+            serialNumber
+        )
+
+        val signature = Schnorr.unblindSignature(blindedChallenge, response.signature)
+
+        val digitalEuro = DigitalEuro(
+            serialNumber,
+            amount,
+            initialTheta,
+            signature,
+            arrayListOf(),
+            response.timestamp,
+            response.hashSignature,
+            group.gElementFromBytes(response.bankPublicKey),
+            response.bankKeySignature,
+            response.amountSignature
+        )
+
         wallet.addToWallet(digitalEuro, firstT)
         onDataChangeCallback?.invoke("Withdrawn €${amount.toFloat()/100.0} successfully!")
         return digitalEuro
@@ -162,7 +187,7 @@ class User(
 //        onDataChangeCallback?.invoke("ENTERED RECEIVE FUNCTION")
         val usedRandomness = lookUpRandomness(publicKeySender) ?: return "Randomness Not found!"
         removeRandomness(publicKeySender)
-        val transactionResult = Transaction.validate(transactionDetails, publicKeyBank, group, crs)
+        val transactionResult = Transaction.validate(transactionDetails, publicKeyBank, group, crs, isDeposit = false)
         if (transactionResult.valid) {
             wallet.addToWallet(transactionDetails, usedRandomness)
             val amount = transactionDetails.digitalEuro.amount

@@ -17,6 +17,7 @@ import nl.tudelft.trustchain.offlineeuro.entity.RegisteredUser
 import nl.tudelft.trustchain.offlineeuro.entity.User
 import nl.tudelft.trustchain.offlineeuro.entity.WalletEntry
 import nl.tudelft.trustchain.offlineeuro.enums.Role
+import java.time.LocalDateTime
 import kotlin.math.floor
 
 object TableHelpers {
@@ -161,6 +162,18 @@ object TableHelpers {
                 else -> "Double-spent"
             }
         }
+
+        // Token timestamp field
+        val timestampField = TextView(styledContext).apply {
+            layoutParams = layoutParams(0.2f)
+            text = walletEntry.digitalEuro.withdrawalTimestamp.toString()
+        }
+
+        val bankpk = TextView(styledContext).apply {
+            layoutParams = layoutParams(0.2f)
+            text = walletEntry.digitalEuro.bankPublicKey.toString()
+        }
+
         // Serial number field (truncated)
         val serialField = TextView(styledContext).apply {
             layoutParams = layoutParams(0.3f)
@@ -168,6 +181,8 @@ object TableHelpers {
         }
         tableRow.addView(amountField)
         tableRow.addView(statusField)
+        tableRow.addView(timestampField)
+        //tableRow.addView(bankpk)
         tableRow.addView(serialField)
 
         // Action buttons

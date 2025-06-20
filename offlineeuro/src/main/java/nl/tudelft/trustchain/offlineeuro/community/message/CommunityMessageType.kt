@@ -28,4 +28,6 @@ enum class CommunityMessageType {
 
     FraudControlRequestMessage,
     FraudControlReplyMessage,
+
+    BankRegistrationReplyMessage,
 }

@@ -1,5 +1,6 @@
 package nl.tudelft.trustchain.offlineeuro.entity
 
+import android.util.Log
 import it.unisa.dia.gas.jpbc.Element
 import nl.tudelft.trustchain.offlineeuro.cryptography.BilinearGroup
 import nl.tudelft.trustchain.offlineeuro.cryptography.CRS
@@ -24,6 +25,8 @@ enum class TransactionResult(val valid: Boolean, val description: String) {
     INVALID_PROOF_IN_CHAIN(false, "Invalid proof in chain"),
     INVALID_CHAIN_OF_PROOFS(false, "Invalid chaining of proofs"),
     INVALID_PREVIOUS_TRANSACTION_SIGNATURE(false, "Invalid previous transaction signature"),
+    INVALID_TIMESTAMP_CHAIN(false, "Invalid timestamp verification chain"),
+    INVALID_AMOUNT(false, "Invalid amount verification")
 }
 
 data class TransactionDetailsBytes(
@@ -101,7 +104,8 @@ object Transaction {
         transaction: TransactionDetails,
         publicKeyBank: Element,
         bilinearGroup: BilinearGroup,
-        crs: CRS
+        crs: CRS,
+        isDeposit: Boolean
     ): TransactionResult {
         // Verify if the Digital euro is signed
         val digitalEuro = transaction.digitalEuro
@@ -124,6 +128,14 @@ object Transaction {
             return TransactionResult.INVALID_CURRENT_TRANSACTION_PROOF
         }
 
+        if (!validateTimestampChain(digitalEuro, crs, bilinearGroup)) {
+            return TransactionResult.INVALID_TIMESTAMP_CHAIN
+        }
+
+        if(!validateAmount(digitalEuro, crs, bilinearGroup, isDeposit)) {
+            return TransactionResult.INVALID_AMOUNT
+        }
+
         // Validate that d2 is constructed correctly
         val usedY = transactionProof.usedY
         val usedVS = transactionProof.usedVS
@@ -142,6 +154,130 @@ object Transaction {
         }
 
         return validateProofChain(transaction, bilinearGroup, crs)
+    }
+
+    fun validateTimestampChain(
+        digitalEuro: DigitalEuro,
+        crs: CRS,
+        bilinearGroup: BilinearGroup
+    ): Boolean {
+        // Check all required fields are present
+        if (crs.ttpPublicKey == null) {
+            Log.d("OfflineEuro", "TTP public key is null")
+            return false
+        }
+        // Verify TTP signed the bank's public key
+        val bankKeyVerified = Schnorr.verifySchnorrSignature(
+            digitalEuro.bankKeySignature,
+            crs.ttpPublicKey,
+            bilinearGroup
+        )
+        if (!bankKeyVerified) {
+            Log.d("OfflineEuro", "Bank key signature is invalid")
+            return false
+        }
+
+        // Verify bank signed the hash
+        val hashVerified = Schnorr.verifySchnorrSignature(
+            digitalEuro.hashSignature,
+            digitalEuro.bankPublicKey,
+            bilinearGroup
+        )
+        if (!hashVerified) {
+            Log.d("OfflineEuro", "Bank hash signature is invalid")
+            return false
+        }
+
+        // Verify the signed message is the actual hash
+        val expectedHash = "${digitalEuro.serialNumber} | ${String(digitalEuro.amountSignature.signedMessage, Charsets.UTF_8)} | ${digitalEuro.withdrawalTimestamp}".hashCode()
+        if (String(digitalEuro.hashSignature.signedMessage, Charsets.UTF_8).toInt() != expectedHash) {
+            Log.d("OfflineEuro", "Bank hash is invalid")
+            return false
+        }
+
+        return true
+    }
+
+    fun validateAmount(
+        digitalEuro: DigitalEuro,
+        crs: CRS,
+        bilinearGroup: BilinearGroup,
+        isDeposit: Boolean = false
+    ): Boolean {
+        // Verify bank signed the amount
+        val amountVerified = Schnorr.verifySchnorrSignature(
+            digitalEuro.amountSignature,
+            digitalEuro.bankPublicKey,
+            bilinearGroup
+        )
+
+        if (!amountVerified) {
+            Log.d("OfflineEuro", "Bank amount signature is invalid")
+            return false
+        }
+
+        // Only validate amount matching for non-deposits
+        if (!isDeposit) {
+            // Verify the signed amount is currently of the expected value
+            if (!(digitalEuro.amount >= getValueAfterFee(digitalEuro)) || !(digitalEuro.amount <= getValueUpperBound(digitalEuro))) {
+                Log.d("OfflineEuro", "Bank amount mismatch: ${digitalEuro.amount} != ${getValueAfterFee(digitalEuro)}")
+                return false
+            }
+        }
+
+        return true
+    }
+
+    fun getValueAfterFee(digitalEuro: DigitalEuro): Long {
+        val fee = calculateTransactionFee(digitalEuro)
+        val left = (String(digitalEuro.amountSignature.signedMessage, Charsets.UTF_8).toFloat() * (1.00-fee)).toLong()
+
+        return left
+    }
+
+    fun getValueUpperBound(digitalEuro: DigitalEuro): Long {
+        val fee = calculateUpperBound(digitalEuro)
+        val left = (String(digitalEuro.amountSignature.signedMessage, Charsets.UTF_8).toFloat() * (1.00-fee)).toLong()
+
+        return left
+    }
+
+    fun calculateTransactionFee(digitalEuro: DigitalEuro): Double {
+        val currentTime = System.currentTimeMillis()
+        val referenceTimestamp = digitalEuro.withdrawalTimestamp
+        val timePassed = (currentTime - referenceTimestamp) / (1000.0 * 60 * 60)
+
+        val currentTransferCount = calculateTransferCount(digitalEuro)
+
+        var fee = (timePassed/ 24.0) * 0.05
+
+        // No fee for the first 3 transactions
+        if (currentTransferCount > 2) {
+            fee += (currentTransferCount - 2) * 0.05
+        }
+
+        return fee
+    }
+
+    fun calculateUpperBound(digitalEuro: DigitalEuro): Double {
+        val currentTime = System.currentTimeMillis() - 10000
+        val referenceTimestamp = digitalEuro.withdrawalTimestamp
+        val timePassed = (currentTime - referenceTimestamp) / (1000.0 * 60 * 60)
+
+        val currentTransferCount = calculateTransferCount(digitalEuro)
+
+        var fee = (timePassed/ 24.0) * 0.05
+
+        // No fee for the first 3 transactions
+        if (currentTransferCount > 2) {
+            fee += (currentTransferCount - 2) * 0.05
+        }
+
+        return fee
+    }
+
+    fun calculateTransferCount(digitalEuro: DigitalEuro): Int {
+        return digitalEuro.proofs.size
     }
 
     fun validateProofChain(

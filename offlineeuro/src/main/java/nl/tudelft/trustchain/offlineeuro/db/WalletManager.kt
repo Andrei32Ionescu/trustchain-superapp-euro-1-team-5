@@ -26,8 +26,11 @@ class WalletManager(
             secretT: ByteArray,
             transactionSignature: ByteArray?,
             timesSpent: Long,
-            receivedTimestamp: Long,
-            transferCount: Long
+            timestamp: Long,
+            hashSignature: ByteArray,
+            bankPublicKey: ByteArray,
+            bankKeySignature: ByteArray,
+            amountSignature: ByteArray
         ->
         WalletEntry(
             DigitalEuro(
@@ -35,14 +38,18 @@ class WalletManager(
                 amount,
                 group.gElementFromBytes(firstTheta),
                 deserializeSchnorr(signature)!!,
-                deserializeGSP(previousProofs)
+                deserializeGSP(previousProofs),
+                timestamp,
+                deserializeSchnorr(hashSignature)!!,
+                group.gElementFromBytes(bankPublicKey),
+                deserializeSchnorr(bankKeySignature)!!,
+                deserializeSchnorr(amountSignature)!!
             ),
             group.zrElementFromBytes(secretT),
             deserializeSchnorr(transactionSignature),
             timesSpent,
-            receivedTimestamp,
-            transferCount.toInt()
-        )
+            System.currentTimeMillis()
+            )
     }
 
     /**
@@ -69,7 +76,12 @@ class WalletManager(
             serialize(digitalEuro.signature)!!,
             serialize(digitalEuro.proofs),
             walletEntry.t.toBytes(),
-            serialize(walletEntry.transactionSignature)
+            serialize(walletEntry.transactionSignature),
+            digitalEuro.withdrawalTimestamp,
+            serialize(digitalEuro.hashSignature)!!,
+            digitalEuro.bankPublicKey.toBytes(),
+            serialize(digitalEuro.bankKeySignature)!!,
+            serialize(digitalEuro.amountSignature)!!
         )
         return true
     }
@@ -121,12 +133,4 @@ class WalletManager(
         queries.clearWalletTable()
     }
 
-    fun incrementTransferCount(digitalEuro: DigitalEuro) {
-        queries.incrementTransferCount(
-            digitalEuro.serialNumber,
-            digitalEuro.firstTheta1.toBytes(),
-            serialize(digitalEuro.signature)!!,
-            serialize(digitalEuro.proofs)
-        )
-    }
 }

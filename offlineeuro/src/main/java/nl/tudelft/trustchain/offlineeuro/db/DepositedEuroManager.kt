@@ -20,13 +20,23 @@ class DepositedEuroManager(
             firstTheta: ByteArray,
             signature: ByteArray,
             previousProofs: ByteArray?,
+            timestamp: Long,
+            hashSignature: ByteArray,
+            bankPublicKey: ByteArray,
+            bankKeySignature: ByteArray,
+            amountSignature: ByteArray
         ->
         DigitalEuro(
             serialNumber,
             amount,
             group.gElementFromBytes(firstTheta),
             deserializeSchnorr(signature)!!,
-            deserializeGSP(previousProofs)
+            deserializeGSP(previousProofs),
+            timestamp,
+            deserializeSchnorr(hashSignature)!!,
+            group.gElementFromBytes(bankPublicKey),
+            deserializeSchnorr(bankKeySignature)!!,
+            deserializeSchnorr(amountSignature)!!
         )
     }
 
@@ -36,23 +46,33 @@ class DepositedEuroManager(
     }
 
     fun insertDigitalEuro(digitalEuro: DigitalEuro) {
-        val (serialNumber, amount,firstTheta1, signature, proofs) = digitalEuro
+        val (serialNumber, amount,firstTheta1, signature, proofs, timestamp, hashSignature, bankPublicKey, bankKeySignature, amountSignature) = digitalEuro
         queries.insertDepositedEuro(
             serialNumber,
             amount,
             firstTheta1.toBytes(),
             serialize(signature)!!,
-            serialize(proofs)
+            serialize(proofs),
+            timestamp,
+            serialize(hashSignature)!!,
+            bankPublicKey.toBytes(),
+            serialize(bankKeySignature)!!,
+            serialize(amountSignature)!!
         )
     }
 
 
     fun getDigitalEurosByDescriptor(digitalEuro: DigitalEuro): List<DigitalEuro> {
-        val (serialNumber,amount, firstTheta1, signature, _) = digitalEuro
+        val (serialNumber,amount, firstTheta1, signature, _, timestamp, hashSignature, bankPublicKey, bankKeySignature, amountSignature) = digitalEuro
         return queries.getDepositedEuroByDescriptor(
             serialNumber,
             firstTheta1.toBytes(),
             serialize(signature)!!,
+            timestamp,
+            serialize(hashSignature)!!,
+            bankPublicKey.toBytes(),
+            serialize(bankKeySignature)!!,
+            serialize(amountSignature)!!,
             digitalEuroMapper
         ).executeAsList()
     }

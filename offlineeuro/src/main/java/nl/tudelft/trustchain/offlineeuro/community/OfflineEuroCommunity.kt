@@ -45,12 +45,21 @@ import nl.tudelft.trustchain.offlineeuro.entity.TransactionDetailsBytes
 import nl.tudelft.trustchain.offlineeuro.enums.Role
 import java.math.BigInteger
 import android.util.Log
+import it.unisa.dia.gas.jpbc.Element
+import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.bilinearGroup
+import nl.tudelft.trustchain.offlineeuro.communication.ICommunicationProtocol
+import nl.tudelft.trustchain.offlineeuro.community.message.BankRegistrationReplyMessage
+import nl.tudelft.trustchain.offlineeuro.cryptography.SchnorrSignature
+import nl.tudelft.trustchain.offlineeuro.entity.DigitalEuro
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 object MessageID {
     const val GET_GROUP_DESCRIPTION_CRS = 9
     const val GET_GROUP_DESCRIPTION_CRS_REPLY = 10
     const val REGISTER_AT_TTP = 11
-    const val REGISTER_AT_TTP_REPLY = 24
+    // TODO THIS NUMBER WAS CHANGED
+    const val REGISTER_AT_TTP_REPLY = 26
     const val REQUEST_USER_VERIFICATION = 25
     const val USER_VERIFICATION_SUBMIT = 27
 
@@ -58,6 +67,7 @@ object MessageID {
     const val GET_BLIND_SIGNATURE_RANDOMNESS_REPLY = 13
     const val GET_BLIND_SIGNATURE = 14
     const val GET_BLIND_SIGNATURE_REPLY = 15
+    const val BANK_REGISTRATION_REPLY = 24
 
     const val GET_TRANSACTION_RANDOMIZATION_ELEMENTS = 16
     const val GET_TRANSACTION_RANDOMIZATION_ELEMENTS_REPLY = 17
@@ -95,6 +105,7 @@ class OfflineEuroCommunity(
 
         messageHandlers[MessageID.GET_BLIND_SIGNATURE] = ::onGetBlindSignaturePacket
         messageHandlers[MessageID.GET_BLIND_SIGNATURE_REPLY] = ::onGetBlindSignatureReplyPacket
+        messageHandlers[MessageID.BANK_REGISTRATION_REPLY] = ::onBankRegistrationReplyPacket
 
         messageHandlers[MessageID.GET_TRANSACTION_RANDOMIZATION_ELEMENTS] = ::onGetTransactionRandomizationElementsRequestPacket
         messageHandlers[MessageID.GET_TRANSACTION_RANDOMIZATION_ELEMENTS_REPLY] = ::onGetTransactionRandomizationElementsReplyPacket
@@ -240,7 +251,8 @@ class OfflineEuroCommunity(
     fun registerAtTTP(
         name: String,
         myPublicKeyBytes: ByteArray,
-        publicKeyTTP: ByteArray
+        publicKeyTTP: ByteArray,
+        role: Role
     ) {
         val ttpPeer = getPeerByPublicKeyBytes(publicKeyTTP) ?: throw Exception("TTP not found")
         Log.d("EUDI", "Registering at ttp")
@@ -250,7 +262,8 @@ class OfflineEuroCommunity(
                 TTPRegistrationPayload(
                     name,
                     myPublicKeyBytes,
-                    myPeer.publicKey.keyToBin()
+                    myPeer.publicKey.keyToBin(),
+                    role
                 )
             )
 
@@ -269,15 +282,16 @@ class OfflineEuroCommunity(
     ) {
         val senderPKBytes = peer.publicKey.keyToBin()
         val userName = payload.userName
-//        val transactionId = payload.transactionId
         val userPKBytes = payload.publicKey
-//        Log.d("EUDI", payload.transactionId)
+        val role = payload.role
+
         val message =
             TTPRegistrationMessage(
                 userName,
                 userPKBytes,
-//                transactionId,
-                senderPKBytes
+                senderPKBytes,
+                role,
+                peer
             )
 
         addMessage(message)
@@ -342,8 +356,8 @@ class OfflineEuroCommunity(
         challenge: BigInteger,
         publicKeyBytes: ByteArray,
         bankPublicKeyBytes: ByteArray,
-        amount: Long
-
+        amount: Long,
+        serialNumber: String
     ) {
         val bankPeer = getPeerByPublicKeyBytes(bankPublicKeyBytes)
 
@@ -354,7 +368,8 @@ class OfflineEuroCommunity(
                 BlindSignatureRequestPayload(
                     challenge,
                     publicKeyBytes,
-                    amount
+                    amount,
+                    serialNumber
                 )
             )
 
@@ -375,16 +390,47 @@ class OfflineEuroCommunity(
                 payload.challenge,
                 payload.publicKeyBytes,
                 payload.amount,
+                payload.serialNumber,
                 requestingPeer
             )
         addMessage(message)
     }
 
     fun sendBlindSignature(
-        signature: BigInteger,
+        signature: ICommunicationProtocol.BlindSignatureResponse,
         peer: Peer
     ) {
-        val packet = serializePacket(MessageID.GET_BLIND_SIGNATURE_REPLY, ByteArrayPayload(signature.toByteArray()))
+        val sigBytes          = signature.signature.toByteArray()
+        val tsBytes           = ByteBuffer.allocate(Long.SIZE_BYTES)
+            .putLong(signature.timestamp).array()
+        val sigHashBytes      = signature.hashSignature.toBytes()
+        val sigPkBytes        = signature.bankKeySignature.toBytes()
+        val bankPkBytes       = signature.bankPublicKey
+        val sigAmtBytes       = signature.amountSignature.toBytes()
+
+        val totalSize =
+            4 + sigBytes.size +                       // sig length + data
+                tsBytes.size +                            // timestamp (8 B)
+                4 + sigHashBytes.size +                   // Schnorr hash-sig
+                4 + sigPkBytes.size +                     // Schnorr pk-sig
+                4 + bankPkBytes.size +                    // bank PK
+                4 + sigAmtBytes.size                      // Schnorr amt-sig
+
+        val buf = ByteBuffer.allocate(totalSize)
+            .order(ByteOrder.BIG_ENDIAN)
+
+        buf.putInt(sigBytes.size) ; buf.put(sigBytes)
+        buf.put(tsBytes)
+        buf.putInt(sigHashBytes.size) ; buf.put(sigHashBytes)
+        buf.putInt(sigPkBytes.size)   ; buf.put(sigPkBytes)
+        buf.putInt(bankPkBytes.size)  ; buf.put(bankPkBytes)
+        buf.putInt(sigAmtBytes.size)  ; buf.put(sigAmtBytes)
+
+        val payload = ByteArrayPayload(buf.array())
+        val packet  = serializePacket(
+            MessageID.GET_BLIND_SIGNATURE_REPLY,
+            payload
+        )
         send(peer, packet)
     }
 
@@ -397,11 +443,38 @@ class OfflineEuroCommunity(
         requestingPeer: Peer,
         payload: ByteArrayPayload
     ) {
-        val message =
-            BlindSignatureReplyMessage(
-                BigInteger(payload.bytes)
-            )
-        addMessage(message)
+        val buf = ByteBuffer.wrap(payload.bytes).order(ByteOrder.BIG_ENDIAN)
+
+        val sigLen   = buf.int
+        val sigBytes = ByteArray(sigLen).also { buf.get(it) }
+        val signature = BigInteger(sigBytes)
+
+        val timestamp = buf.long
+
+        val sigHashLen   = buf.int
+        val sigHashBytes = ByteArray(sigHashLen).also { buf.get(it) }
+        val hashSignature = SchnorrSignature.fromBytes(sigHashBytes)
+
+        val sigPkLen   = buf.int
+        val sigPkBytes = ByteArray(sigPkLen).also { buf.get(it) }
+        val bankKeySignature = SchnorrSignature.fromBytes(sigPkBytes)
+
+        val bankPkLen   = buf.int
+        val bankPkBytes = ByteArray(bankPkLen).also { buf.get(it) }
+
+        val sigAmtLen   = buf.int
+        val sigAmtBytes = ByteArray(sigAmtLen).also { buf.get(it) }
+        val amountSignature = SchnorrSignature.fromBytes(sigAmtBytes)
+
+        val msg = BlindSignatureReplyMessage(
+            signature,
+            timestamp,
+            hashSignature,
+            bankPkBytes,
+            bankKeySignature,
+            amountSignature
+        )
+        addMessage(msg)
     }
 
     fun getTransactionRandomizationElements(
@@ -480,7 +553,7 @@ class OfflineEuroCommunity(
     }
 
     fun onTransactionPacket(packet: Packet) {
-        //Log.d("OfflineEuroCommunity", "On transaction packet!")
+        Log.d("OfflineEuroCommunity", "On transaction packet!")
         val (peer, payload) = packet.getAuthPayload(TransactionDetailsPayload)
         onTransaction(peer, payload)
     }
@@ -489,7 +562,7 @@ class OfflineEuroCommunity(
         peer: Peer,
         payload: TransactionDetailsPayload
     ) {
-        //Log.d("OfflineEuroCommunity", "On transaction message!")
+        Log.d("OfflineEuroCommunity", "On transaction message!")
         val publicKey = payload.publicKey
         val transactionDetailsBytes = payload.transactionDetailsBytes
         val message = TransactionMessage(publicKey, transactionDetailsBytes, peer)
@@ -569,6 +642,27 @@ class OfflineEuroCommunity(
             )
 
         send(peer, packet)
+    }
+
+    fun sendBankRegistrationReply(
+        signatureBytes: ByteArray,
+        requestingPeer: Peer
+    ) {
+        val packet = serializePacket(
+            MessageID.BANK_REGISTRATION_REPLY,
+            ByteArrayPayload(signatureBytes)
+        )
+        send(requestingPeer, packet)
+    }
+
+    private fun onBankRegistrationReplyPacket(packet: Packet) {
+        val (_, payload) = packet.getAuthPayload(ByteArrayPayload)
+        onBankRegistrationReply(payload)
+    }
+
+    private fun onBankRegistrationReply(payload: ByteArrayPayload) {
+        val message = BankRegistrationReplyMessage(payload.bytes)
+        addMessage(message)
     }
 
     fun onFraudControlRequestPacket(packet: Packet) {

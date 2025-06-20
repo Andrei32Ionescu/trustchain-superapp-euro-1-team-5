@@ -1,34 +1,56 @@
 createDepositedEurosTable:
 CREATE TABLE IF NOT EXISTS DepositedEuros (
-        serialNumber TEXT NOT NULL,
-        amount INTEGER NOT NULL,  -- Add amount field
-        firstTheta1 BLOB NOT NULL,
-        signature BLOB NOT NULL,
-        proofs BLOB
+    serialNumber        TEXT    NOT NULL,
+    amount              INTEGER NOT NULL,
+    firstTheta1         BLOB    NOT NULL,
+    signature           BLOB    NOT NULL,
+    proofs              BLOB,               -- optional
+    timestamp           INTEGER NOT NULL,
+    hashSignature  BLOB    NOT NULL,
+    bankPublicKey       BLOB    NOT NULL,
+    bankKeySignature    BLOB    NOT NULL,
+    amountSignature     BLOB    NOT NULL
 );
 
 insertDepositedEuro:
-INSERT INTO DepositedEuros(
+INSERT INTO DepositedEuros (
     serialNumber,
-    amount,     -- Add amount field
+    amount,
     firstTheta1,
     signature,
-    proofs)
-VALUES (?,
-    ?,          -- Add amount parameter
-    ?,
-    ?,
-    ?
+    proofs,
+    timestamp,
+    hashSignature,
+    bankPublicKey,
+    bankKeySignature,
+    amountSignature
+) VALUES (
+    ?,  -- serialNumber
+    ?,  -- amount
+    ?,  -- firstTheta1
+    ?,  -- signature
+    ?,  -- proofs
+    ?,  -- timestamp
+    ?,  -- hashSignature
+    ?,  -- bankPublicKey
+    ?,  -- bankKeySignature
+    ?   -- amountSignature
 );
 
 getDepositedEuroByDescriptor:
 SELECT *
-FROM DepositedEuros
-WHERE serialNumber LIKE ? AND firstTheta1 = ? AND signature = ?;
+FROM   DepositedEuros
+WHERE  serialNumber        = ?
+  AND  firstTheta1         = ?
+  AND  signature           = ?
+  AND  timestamp           = ?
+  AND  hashSignature       = ?
+  AND  bankPublicKey       = ?
+  AND  bankKeySignature    = ?
+  AND  amountSignature     = ?;
 
 getDepositedEuros:
-SELECT *
-FROM DepositedEuros;
+SELECT * FROM DepositedEuros;
 
 clearDepositedEurosTable:
 DELETE FROM DepositedEuros;
