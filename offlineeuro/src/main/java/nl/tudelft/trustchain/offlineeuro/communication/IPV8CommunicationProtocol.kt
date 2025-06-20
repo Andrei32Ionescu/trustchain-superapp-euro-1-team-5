@@ -15,11 +15,14 @@ import nl.tudelft.trustchain.offlineeuro.community.message.FraudControlReplyMess
 import nl.tudelft.trustchain.offlineeuro.community.message.FraudControlRequestMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.ICommunityMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.MessageList
+import nl.tudelft.trustchain.offlineeuro.community.message.RequestUserVerificationMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.TTPRegistrationMessage
+import nl.tudelft.trustchain.offlineeuro.community.message.TTPRegistrationReplyMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.TransactionMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.TransactionRandomizationElementsReplyMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.TransactionRandomizationElementsRequestMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.TransactionResultMessage
+import nl.tudelft.trustchain.offlineeuro.community.message.UserVerificationSubmitMessage
 import nl.tudelft.trustchain.offlineeuro.cryptography.BilinearGroup
 import nl.tudelft.trustchain.offlineeuro.cryptography.GrothSahaiProof
 import nl.tudelft.trustchain.offlineeuro.cryptography.RandomizationElements
@@ -71,6 +74,7 @@ class IPV8CommunicationProtocol(
         nameTTP: String,
         role: Role
     ): SchnorrSignature? {
+        Log.d("EUDI", "Registering")
         val ttpAddress = addressBookManager.getAddressByName(nameTTP)
         community.registerAtTTP(userName, publicKey.toBytes(), ttpAddress.peerPublicKey!!, role)
 
@@ -162,11 +166,11 @@ class IPV8CommunicationProtocol(
         return addressBookManager.getAddressByName(name).publicKey
     }
 
-    private fun waitForMessage(messageType: CommunityMessageType): ICommunityMessage {
+    private fun waitForMessage(messageType: CommunityMessageType, specificTimeoutInMs: Int = timeOutInMS): ICommunityMessage {
         var loops = 0
 
         while (!community.messageList.any { it.messageType == messageType }) {
-            if (loops * sleepDuration >= timeOutInMS) {
+            if (loops * sleepDuration >= specificTimeoutInMs) {
                 throw Exception("TimeOut")
             }
             Thread.sleep(sleepDuration)
@@ -264,16 +268,15 @@ class IPV8CommunicationProtocol(
         if (participant !is TTP) {
             return
         }
-
+//        val tid = message.transactionId
+//        Log.d("EUDI","Handle registration message, transaction id: $tid")
+        Log.d("EUDI","Handle registration message, ${message.userName}, ${message.messageType}, ${message.userPKBytes}")
         val ttp = participant as TTP
         val publicKey = ttp.group.gElementFromBytes(message.userPKBytes)
-        val (success, signature) = ttp.registerUser(message.userName, publicKey, message.role)
 
-        // If it's a bank registration, send back the signature
-        if (message.role == Role.Bank && signature != null && success) {
-            val signatureBytes = SchnorrSignatureSerializer.serializeSchnorrSignature(signature)
-            community.sendBankRegistrationReply(signatureBytes, message.requestingPeer)
-        }
+        ttp.sendUserRequestData(message.userName, publicKey, message.overlayPK)
+
+//        val submitVerifMessage = waitForMessage(CommunityMessageType.UserVerificationSubmitMessage) as UserVerificationSubmitMessage
     }
 
     private fun handleAddressRequestMessage(message: AddressRequestMessage) {
@@ -303,10 +306,53 @@ class IPV8CommunicationProtocol(
             is TransactionRandomizationElementsRequestMessage -> handleTransactionRandomizationElementsRequest(message)
             is TransactionMessage -> handleTransactionMessage(message)
             is TTPRegistrationMessage -> handleRegistrationMessage(message)
+            is TTPRegistrationReplyMessage -> handleRegistrationReplyMessage(message)
+            is RequestUserVerificationMessage -> handleRequestUserVerificationMessage(message)
+            is UserVerificationSubmitMessage -> handleUserVerificationSubmitMessage(message)
             is FraudControlRequestMessage -> handleFraudControlRequestMessage(message)
             else -> throw Exception("Unsupported message type")
         }
         return
+    }
+
+    // received by user
+    private fun handleRegistrationReplyMessage(message: TTPRegistrationReplyMessage) {
+        Log.d("EUDI", "handle registration")
+        if (participant !is User) {
+            return
+        }
+        (participant as User).onReceivedTTPRegisterReply()
+
+//        val message = waitForMessage(CommunityMessageType.TTPRegistrationReplyMessage) as TTPRegistrationReplyMessage
+//        return message.result
+        // do user stuff based on status
+    }
+
+    private fun handleRequestUserVerificationMessage(message: RequestUserVerificationMessage) {
+        Log.d("EUDI", "handle request user verification")
+        if (participant !is User) {
+            return
+        }
+        (participant as User).onReceivedRequestUserVerification(message.deeplink, message.transactionId)
+    }
+
+    private fun handleUserVerificationSubmitMessage(message: UserVerificationSubmitMessage) {
+        if (participant !is TTP) {
+            return
+        }
+        val ttp = participant as TTP
+        ttp.registerUser(message.transactionId)
+        
+        val (success, signature) = ttp.registerUser(message.userName, publicKey, message.role, message.transactionId)
+
+        // If it's a bank registration, send back the signature
+        if (message.role == Role.Bank && signature != null && success) {
+            val signatureBytes = SchnorrSignatureSerializer.serializeSchnorrSignature(signature)
+            community.sendBankRegistrationReply(signatureBytes, message.requestingPeer)
+        }
+        
+        Log.d("EUDI", "Handle user verification submit message")
+        
     }
 
     private fun getParticipantRole(): Role {
@@ -316,5 +362,34 @@ class IPV8CommunicationProtocol(
             is Bank -> Role.Bank
             else -> throw Exception("Unknown role")
         }
+    }
+
+    override fun sendRegisterAtTTPReplyMessage(
+        status: String,
+        publicKey: ByteArray
+    ) {
+        community.sendRegisterAtTTPReplyMessage(
+            status,
+            publicKey,
+        )
+    }
+
+    override fun sendRequestUserVerificationMessage(
+        transactionId: String,
+        deeplink: String,
+        publicKey: ByteArray,
+    ) {
+        community.sendRequestUserVerificationMessage(
+            transactionId,
+            deeplink,
+            publicKey
+        )
+    }
+
+    override fun sendUserSubmitVerificationMessage(transactionId: String, publicKey: ByteArray) {
+        community.sendUserVerificationSubmitMessage(
+            transactionId,
+            publicKey
+        )
     }
 }

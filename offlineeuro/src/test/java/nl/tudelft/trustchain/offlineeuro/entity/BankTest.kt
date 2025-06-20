@@ -1,5 +1,8 @@
 package nl.tudelft.trustchain.offlineeuro.entity
 
+import android.util.Log
+import io.mockk.every
+import io.mockk.mockkStatic
 import nl.tudelft.trustchain.offlineeuro.communication.IPV8CommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.community.OfflineEuroCommunity
 import nl.tudelft.trustchain.offlineeuro.community.message.AddressMessage
@@ -12,8 +15,10 @@ import nl.tudelft.trustchain.offlineeuro.db.AddressBookManager
 import nl.tudelft.trustchain.offlineeuro.db.DepositedEuroManager
 import nl.tudelft.trustchain.offlineeuro.enums.Role
 import org.junit.Assert
+import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito
+import org.mockito.Mockito.`when`
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.never
@@ -28,10 +33,12 @@ class BankTest {
 
     @Test
     fun initWithSetupTest() {
+
         val addressBookManager = Mockito.mock(AddressBookManager::class.java)
         val community = Mockito.mock(OfflineEuroCommunity::class.java)
         val communicationProtocol = IPV8CommunicationProtocol(addressBookManager, community)
-
+        mockkStatic(Log::class)
+        every { Log.d(any(),any()) } returns 0
         whenever(community.messageList).thenReturn(communicationProtocol.messageList)
         whenever(community.getGroupDescriptionAndCRS()).then {
             communicationProtocol.messageList.add(

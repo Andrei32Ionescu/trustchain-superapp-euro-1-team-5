@@ -28,12 +28,14 @@ class RegisteredUserManager(
     private val registeredUserMapper = {
             id: Long,
             name: String,
-            publicKey: ByteArray
+            publicKey: ByteArray,
+            legalName: String
         ->
         RegisteredUser(
             id,
             name,
-            bilinearGroup.pairing.g1.newElementFromBytes(publicKey).immutable
+            bilinearGroup.pairing.g1.newElementFromBytes(publicKey).immutable,
+            legalName
         )
     }
 
@@ -53,11 +55,13 @@ class RegisteredUserManager(
      */
     fun addRegisteredUser(
         userName: String,
-        publicKey: Element
+        publicKey: Element,
+        legalName: String
     ): Boolean {
         queries.addUser(
             userName,
             publicKey.toBytes(),
+            legalName,
         )
         return true
     }

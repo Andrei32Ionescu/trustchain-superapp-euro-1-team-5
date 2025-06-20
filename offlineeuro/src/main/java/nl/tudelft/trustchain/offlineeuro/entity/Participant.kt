@@ -1,5 +1,6 @@
 package nl.tudelft.trustchain.offlineeuro.entity
 
+import android.util.Log
 import it.unisa.dia.gas.jpbc.Element
 import nl.tudelft.trustchain.offlineeuro.communication.ICommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.cryptography.BilinearGroup
@@ -12,7 +13,8 @@ abstract class Participant(
     val communicationProtocol: ICommunicationProtocol,
     val name: String,
     val onDataChangeCallback: ((String?) -> Unit)? = null,
-    val role: Role
+    val role: Role,
+    var onDataChangeCallback: ((String?) -> Unit)? = null
 ) {
     protected lateinit var privateKey: Element
     lateinit var publicKey: Element
@@ -21,8 +23,11 @@ abstract class Participant(
     lateinit var crs: CRS
 
     fun setUp() {
+        Log.d("EUDI", "User setp 1")
         getGroupDescriptionAndCRS()
+        Log.d("EUDI", "User setp 2")
         generateKeyPair()
+        Log.d("EUDI", "User setp 3")
         registerAtTTP()
     }
 

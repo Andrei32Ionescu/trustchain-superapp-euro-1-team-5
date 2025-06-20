@@ -8,7 +8,8 @@ class TTPRegistrationMessage(
     val userPKBytes: ByteArray,
     val peerPublicKeyBytes: ByteArray,
     val role: Role,
-    val requestingPeer: Peer
+    val requestingPeer: Peer,
+    val overlayPK: ByteArray
 ) : ICommunityMessage {
     override val messageType = CommunityMessageType.TTPRegistrationMessage
 }

@@ -1,16 +1,34 @@
 package nl.tudelft.trustchain.offlineeuro.entity
 
 import android.content.Context
+
+import android.content.Intent
 import android.util.Log
 import android.widget.Toast
 import androidx.core.content.ContentProviderCompat.requireContext
+import androidx.core.net.toUri
 import it.unisa.dia.gas.jpbc.Element
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import nl.tudelft.trustchain.offlineeuro.communication.ICommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.cryptography.BilinearGroup
 import nl.tudelft.trustchain.offlineeuro.cryptography.Schnorr
 import nl.tudelft.trustchain.offlineeuro.db.WalletManager
 import nl.tudelft.trustchain.offlineeuro.enums.Role
+import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONArray
+import org.json.JSONException
+import org.json.JSONObject
+import java.io.IOException
 import java.util.UUID
+
+import kotlinx.coroutines.*
+import okhttp3.*
 
 class User(
     name: String,
@@ -19,9 +37,13 @@ class User(
     private var walletManager: WalletManager? = null,
     communicationProtocol: ICommunicationProtocol,
     runSetup: Boolean = true,
-    onDataChangeCallback: ((String?) -> Unit)? = null
+    onDataChangeCallback: ((String?) -> Unit)? = null,
+    val onRegister: (() -> Unit)? = null,
+    val onReqUserVerif: ((String, String) -> Unit)? = null,
+    transactionId: String? = "",
 ) : Participant(communicationProtocol, name, onDataChangeCallback, Role.User) {
     val wallet: Wallet
+
 
     init {
         communicationProtocol.participant = this
@@ -145,6 +167,16 @@ class User(
         return walletManager!!.getWalletEntriesToSpend().sumOf {
             it.digitalEuro.amount
         }
+    }
+
+    fun onReceivedRequestUserVerification(deeplink: String, transactionId: String) {
+        Log.d("EUDI", "We are inside user class after having received user verification request")
+        onReqUserVerif!!.invoke(deeplink, transactionId)
+    }
+
+    fun onReceivedTTPRegisterReply() {
+        Log.d("EUDI", "hello")
+        onRegister!!.invoke()
     }
 
     override fun onReceivedTransaction(

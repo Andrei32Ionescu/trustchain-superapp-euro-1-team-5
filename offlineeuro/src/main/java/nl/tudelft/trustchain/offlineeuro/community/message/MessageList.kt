@@ -11,6 +11,9 @@ class MessageList<ICommunityMessage>(private val onRequestMessageAdded: (ICommun
             TransactionRandomizationElementsRequestMessage::class.java,
             TransactionMessage::class.java,
             TTPRegistrationMessage::class.java,
+            TTPRegistrationReplyMessage::class.java,
+            RequestUserVerificationMessage::class.java,
+            UserVerificationSubmitMessage::class.java,
             FraudControlRequestMessage::class.java
         )
 

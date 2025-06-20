@@ -64,4 +64,20 @@ interface ICommunicationProtocol {
         name: String,
         group: BilinearGroup
     ): Element
+
+    fun sendRegisterAtTTPReplyMessage(
+        status: String,
+        publicKey: ByteArray
+    )
+
+    fun sendRequestUserVerificationMessage(
+        transactionId: String,
+        deeplink: String,
+        publicKey: ByteArray,
+    )
+
+    fun sendUserSubmitVerificationMessage(
+        transactionId: String,
+        publicKey: ByteArray
+    )
 }
