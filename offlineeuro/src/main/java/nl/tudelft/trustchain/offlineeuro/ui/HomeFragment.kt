@@ -51,7 +51,7 @@ class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
     private lateinit var community: OfflineEuroCommunity
     private lateinit var communicationProtocol: IPV8CommunicationProtocol
 
-    private val walletReturned      = CompletableDeferred<Unit>()
+    private val walletReturned = CompletableDeferred<Unit>()
     private val registrationReplied = CompletableDeferred<Unit>()
 
     private var pendingTxId: String? = null
@@ -134,10 +134,14 @@ class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
     @SuppressLint("RepeatOnLifecycleWrongUsage")
     private suspend fun navigateToUserHomeSafely() = withContext(Dispatchers.Main) {
         repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            Log.d("EUDI", "Navigating to home")
             // run once, then cancel this inner coroutine
-            ParticipantHolder.user = user
-            findNavController().navigate(R.id.nav_home_userhome)
-            this.cancel()
+            if (shouldNavigateOnResume) {
+                ParticipantHolder.user = user
+                findNavController().navigate(R.id.nav_home_userhome)
+                shouldNavigateOnResume = false;
+                this.cancel()
+            }
         }
     }
 
@@ -171,23 +175,8 @@ class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
         walletReturned.complete(Unit)
     }
 
-    override fun onResume() {
-        super.onResume()
-
-        if (shouldNavigateOnResume) {
-            createUser()
-        }
-
-
-        if (shouldNavigateOnResume && eudiFinished) {
-            shouldNavigateOnResume = false
-            Log.d("EUDI", "moving to user home")
-            moveToUserHome()
-        }
-    }
-
     private val onRegister: () -> Unit = {
-        Log.d("EUDI","on register")
+        Log.d("EUDI", "on register")
         eudiFinished = true;
         registrationReplied.complete(Unit)
     }
@@ -199,8 +188,15 @@ class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
         val addressBookManager = AddressBookManager(context, group)
         communicationProtocol = IPV8CommunicationProtocol(addressBookManager, community)
         try {
-            user = User(userName, group, context, null, communicationProtocol, onRegister=onRegister, transactionId=transactionId,
-                onReqUserVerif={ link:String, txId:String -> onReqUserVerif(link, txId) })
+            user = User(
+                userName,
+                group,
+                context,
+                null,
+                communicationProtocol,
+                onRegister = onRegister,
+                transactionId = transactionId,
+                onReqUserVerif = { link: String, txId: String -> onReqUserVerif(link, txId) })
             communicationProtocol.scopePeers()
             val addresses = communicationProtocol.addressBookManager.getAllAddresses()
             Log.d("EUDI", "$addresses")
@@ -209,6 +205,7 @@ class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
         }
         Log.d("EUDI", "Created user")
 
+        shouldNavigateOnResume = true;
         lifecycleScope.launch {
             walletReturned.await() // returned from app
             registrationReplied.await() // got response from TTP
@@ -216,34 +213,4 @@ class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
             navigateToUserHomeSafely()
         }
     }
-
-    private fun moveToUserHome() {
-        if (isAdded && !requireActivity().isFinishing) {
-            Log.d("EUDI", "moving...")
-            try {
-                ParticipantHolder.user = user
-                findNavController().navigate(R.id.nav_home_userhome, null)
-            } catch (e: Exception) {
-                Log.e("Navigation", "Failed to navigate", e)
-            }
-        }
-    }
-
-//    private val activityResultLauncher = registerForActivityResult(
-//        ActivityResultContracts.StartActivityForResult()
-//    ) { result ->
-////        shouldNavigateOnResume = true
-//        val tx = pendingTxId ?: return@registerForActivityResult
-//
-//        val ttpPkBytes = communicationProtocol
-//            .addressBookManager
-//            .getAddressByName("TTP")
-//            .peerPublicKey
-//
-//        communicationProtocol
-//            .sendUserSubmitVerificationMessage(tx, ttpPkBytes!!)
-//
-//        pendingTxId = null
-//        walletReturned.complete(Unit)
-//    }
 }
