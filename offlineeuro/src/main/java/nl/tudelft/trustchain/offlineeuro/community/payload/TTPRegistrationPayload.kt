@@ -9,8 +9,8 @@ import nl.tudelft.trustchain.offlineeuro.enums.Role
 class TTPRegistrationPayload(
     val userName: String,
     val publicKey: ByteArray,
+    val overlayPublicKey: ByteArray,
     val role : Role,
-    val overlayPublicKey: ByteArray
 ) : Serializable {
     override fun serialize(): ByteArray {
         var payload = ByteArray(0)
@@ -41,9 +41,8 @@ class TTPRegistrationPayload(
                 TTPRegistrationPayload(
                     nameBytes.toString(Charsets.UTF_8),
                     publicKeyBytes,
-                    Role.entries[roleBytes[0].toInt()],
-//                    transactionIdBytes.toString(Charsets.UTF_8),
-                    overlayPKBytes
+                    overlayPKBytes,
+                    Role.entries[roleBytes[0].toInt()]
                 ),
                 localOffset - offset
             )

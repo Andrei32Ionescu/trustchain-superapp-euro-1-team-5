@@ -1,12 +1,13 @@
 package nl.tudelft.trustchain.offlineeuro.entity
 
 import android.content.Context
-import android.content.Intent
 import android.util.Log
-import androidx.core.net.toUri
-import androidx.lifecycle.lifecycleScope
 import it.unisa.dia.gas.jpbc.Element
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -16,6 +17,7 @@ import nl.tudelft.trustchain.offlineeuro.cryptography.CRSGenerator
 import nl.tudelft.trustchain.offlineeuro.cryptography.GrothSahaiProof
 import nl.tudelft.trustchain.offlineeuro.cryptography.Schnorr
 import nl.tudelft.trustchain.offlineeuro.cryptography.SchnorrSignature
+import nl.tudelft.trustchain.offlineeuro.db.NonRegisteredUserManager
 import nl.tudelft.trustchain.offlineeuro.db.RegisteredUserManager
 import nl.tudelft.trustchain.offlineeuro.enums.Role
 import okhttp3.MediaType
@@ -27,10 +29,6 @@ import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.IOException
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import nl.tudelft.trustchain.offlineeuro.db.NonRegisteredUserManager
 
 class TTP(
     name: String = "TTP",
@@ -60,25 +58,11 @@ class TTP(
     private val localScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     fun registerUser(
-        name: String,
-        publicKey: Element,
-        role: Role,
-        transactionId: String
-    ): Pair<Boolean, SchnorrSignature?> {
-        val result = registeredUserManager.addRegisteredUser(name, publicKey)
-        onDataChangeCallback?.invoke("Registered $name")
-
-        var bankKeySignature: SchnorrSignature? = null
-        if (role == Role.Bank) {
-            // Sign the bank's public key
-            bankKeySignature = Schnorr.schnorrSignature(
-                privateKey,
-                publicKey.toBytes(),
-                group
-            )
-            signedBankKeys[publicKey] = bankKeySignature
-        }
-        
+//        name: String,
+        transactionId: String,
+//        role: Role
+    ): Boolean {
+        // TODO HANDLE USER REGISTRATION
         Log.d("EUDI", "register user")
         localScope.launch {
             try {
@@ -107,9 +91,91 @@ class TTP(
                 communicationProtocol.sendRegisterAtTTPReplyMessage("false", peerPublicKeyBytes)
             }
         }
-        
+
+//        val result = registeredUserManager.addRegisteredUser(name, publicKey)
+//        onDataChangeCallback?.invoke("Registered $name")
+//
+//        var bankKeySignature: SchnorrSignature? = null
+//        if (role == Role.Bank) {
+//            // Sign the bank's public key
+//            bankKeySignature = Schnorr.schnorrSignature(
+//                privateKey,
+//                publicKey.toBytes(),
+//                group
+//            )
+//            signedBankKeys[publicKey] = bankKeySignature
+//        }
+//        return Pair(result, bankKeySignature)
+
+        return true;
+    }
+
+    fun registerBank(
+        publicKey: Element,
+        name: String,
+        role: Role
+    ): Pair<Boolean, SchnorrSignature> {
+        val result = registeredUserManager.addRegisteredUser(name, publicKey, "")
+        onDataChangeCallback?.invoke("Registered bank")
+
+        // Sign the bank's public key
+        val bankKeySignature = Schnorr.schnorrSignature(
+            privateKey,
+            publicKey.toBytes(),
+            group
+        )
+        signedBankKeys[publicKey] = bankKeySignature
         return Pair(result, bankKeySignature)
     }
+
+//    fun registerUser(
+//        name: String,
+//        transactionId: String,
+//        role: Role
+//    ): Deferred<Pair<Boolean, SchnorrSignature?>> =
+//        // TODO HANDLE USER REGISTRATION
+//        CoroutineScope(Dispatchers.Default).async {
+//            Log.d("EUDI", "register user")
+//            var bankKeySignature: SchnorrSignature? = null
+//            val ok: Boolean = try {
+//                val vpToken = getVPToken(transactionId)  ?: return@async Pair(false, null)
+//
+//                val attributes = validateVPToken(vpToken) ?: return@async Pair(false, null)
+//
+//                val legalName = attributes.optString("family_name")
+//                Log.d("EUDI", "got name")
+//                val user = nonRegisteredUserManager.getNonRegisteredUserByTransactionId(transactionId)
+//                // delete user from non-registered database
+//                nonRegisteredUserManager.deleteNonRegisteredUserByTransactionId(transactionId)
+//                val userName = user?.name
+//                val publicKey = user?.publicKey
+//                val overlayPK = user?.overlayPK // The peer's address over the ipv8 network
+//                val result = registeredUserManager.addRegisteredUser(userName!!, publicKey!!, legalName)
+//                onDataChangeCallback?.invoke("Registered $name")
+//                communicationProtocol.sendRegisterAtTTPReplyMessage(result.toString(), overlayPK!!)
+////                onDataChangeCallback?.invoke("Registered $name")
+//
+////                var bankKeySignature: SchnorrSignature? = null
+//                if (role == Role.Bank) {
+//                    // Sign the bank's public key
+//                    bankKeySignature = Schnorr.schnorrSignature(
+//                        privateKey,
+//                        publicKey.toBytes(),
+//                        group
+//                    )
+//                    signedBankKeys[publicKey] = bankKeySignature
+//                }
+//                Log.d("EUDI", "SUCESSS Family name: $legalName")
+//                result
+//            } catch (e: Exception) {
+//                Log.e("Error", "EUDI authentication failed", e)
+//                val user = nonRegisteredUserManager.getNonRegisteredUserByTransactionId(transactionId)
+//                val peerPublicKeyBytes = user?.publicKey!!.toBytes()
+//                communicationProtocol.sendRegisterAtTTPReplyMessage("false", peerPublicKeyBytes)
+//                false
+//            }
+//            Pair(ok, bankKeySignature)
+//        }
 
     fun sendUserRequestData(
 //        data: Pair<String, String>,

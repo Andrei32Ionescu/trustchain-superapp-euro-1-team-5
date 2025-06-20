@@ -58,7 +58,8 @@ object MessageID {
     const val GET_GROUP_DESCRIPTION_CRS = 9
     const val GET_GROUP_DESCRIPTION_CRS_REPLY = 10
     const val REGISTER_AT_TTP = 11
-    const val REGISTER_AT_TTP_REPLY = 24
+    // TODO THIS NUMBER WAS CHANGED
+    const val REGISTER_AT_TTP_REPLY = 26
     const val REQUEST_USER_VERIFICATION = 25
     const val USER_VERIFICATION_SUBMIT = 27
 
@@ -261,8 +262,8 @@ class OfflineEuroCommunity(
                 TTPRegistrationPayload(
                     name,
                     myPublicKeyBytes,
-                    role,
-                    myPeer.publicKey.keyToBin()
+                    myPeer.publicKey.keyToBin(),
+                    role
                 )
             )
 
@@ -281,7 +282,6 @@ class OfflineEuroCommunity(
     ) {
         val senderPKBytes = peer.publicKey.keyToBin()
         val userName = payload.userName
-//        val transactionId = payload.transactionId
         val userPKBytes = payload.publicKey
         val role = payload.role
 
@@ -291,9 +291,7 @@ class OfflineEuroCommunity(
                 userPKBytes,
                 senderPKBytes,
                 role,
-                peer,
-                senderPKBytes
-
+                peer
             )
 
         addMessage(message)
@@ -539,7 +537,6 @@ class OfflineEuroCommunity(
         transactionDetails: TransactionDetailsBytes
     ) {
         val peer = getPeerByPublicKeyBytes(publicKeyReceiver)
-
 
         peer ?: throw Exception("User not found")
 

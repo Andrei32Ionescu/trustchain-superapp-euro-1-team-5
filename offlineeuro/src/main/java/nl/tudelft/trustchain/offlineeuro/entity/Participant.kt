@@ -12,9 +12,8 @@ import nl.tudelft.trustchain.offlineeuro.enums.Role
 abstract class Participant(
     val communicationProtocol: ICommunicationProtocol,
     val name: String,
-    val onDataChangeCallback: ((String?) -> Unit)? = null,
-    val role: Role,
-    var onDataChangeCallback: ((String?) -> Unit)? = null
+    var onDataChangeCallback: ((String?) -> Unit)? = null,
+    val role: Role
 ) {
     protected lateinit var privateKey: Element
     lateinit var publicKey: Element

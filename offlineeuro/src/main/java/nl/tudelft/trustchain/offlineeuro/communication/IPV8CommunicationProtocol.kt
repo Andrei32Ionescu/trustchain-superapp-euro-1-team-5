@@ -37,6 +37,9 @@ import nl.tudelft.trustchain.offlineeuro.enums.Role
 import nl.tudelft.trustchain.offlineeuro.libraries.GrothSahaiSerializer
 import java.math.BigInteger
 import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import nl.tudelft.trustchain.offlineeuro.community.message.BankRegistrationReplyMessage
 import nl.tudelft.trustchain.offlineeuro.cryptography.SchnorrSignature
 import nl.tudelft.trustchain.offlineeuro.libraries.SchnorrSignatureSerializer
@@ -75,6 +78,7 @@ class IPV8CommunicationProtocol(
         role: Role
     ): SchnorrSignature? {
         Log.d("EUDI", "Registering")
+        // TODO OOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
         val ttpAddress = addressBookManager.getAddressByName(nameTTP)
         community.registerAtTTP(userName, publicKey.toBytes(), ttpAddress.peerPublicKey!!, role)
 
@@ -268,15 +272,22 @@ class IPV8CommunicationProtocol(
         if (participant !is TTP) {
             return
         }
-//        val tid = message.transactionId
-//        Log.d("EUDI","Handle registration message, transaction id: $tid")
         Log.d("EUDI","Handle registration message, ${message.userName}, ${message.messageType}, ${message.userPKBytes}")
         val ttp = participant as TTP
         val publicKey = ttp.group.gElementFromBytes(message.userPKBytes)
 
-        ttp.sendUserRequestData(message.userName, publicKey, message.overlayPK)
-
-//        val submitVerifMessage = waitForMessage(CommunityMessageType.UserVerificationSubmitMessage) as UserVerificationSubmitMessage
+        // TODO OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+        if (message.role == Role.Bank) {
+            val (success, signature) = ttp.registerBank(publicKey, message.userName, message.role)
+            // If it's a bank registration, send back the signature
+            if (success) {
+                val signatureBytes = SchnorrSignatureSerializer.serializeSchnorrSignature(signature)
+                community.sendBankRegistrationReply(signatureBytes, message.requestingPeer)
+            }
+        }
+        else if (message.role == Role.User) {
+            ttp.sendUserRequestData(message.userName, publicKey, message.overlayPK)
+        }
     }
 
     private fun handleAddressRequestMessage(message: AddressRequestMessage) {
@@ -340,19 +351,21 @@ class IPV8CommunicationProtocol(
         if (participant !is TTP) {
             return
         }
+        Log.d("EUDI", "Handle user verification submit message")
         val ttp = participant as TTP
         ttp.registerUser(message.transactionId)
-        
-        val (success, signature) = ttp.registerUser(message.userName, publicKey, message.role, message.transactionId)
+//        CoroutineScope(Dispatchers.Default).launch {
+//            val result = ttp.registerUser("name", message.transactionId, Role.User).await() // TODO ADD ROLE AND USERNAME
+//        }
 
-        // If it's a bank registration, send back the signature
-        if (message.role == Role.Bank && signature != null && success) {
-            val signatureBytes = SchnorrSignatureSerializer.serializeSchnorrSignature(signature)
-            community.sendBankRegistrationReply(signatureBytes, message.requestingPeer)
-        }
-        
-        Log.d("EUDI", "Handle user verification submit message")
-        
+        //        val (success, signature) = ttp.registerUser(message.userName, publicKey, message.role)
+//
+//        // If it's a bank registration, send back the signature
+//        if (message.role == Role.Bank && signature != null && success) {
+//            val signatureBytes = SchnorrSignatureSerializer.serializeSchnorrSignature(signature)
+//            community.sendBankRegistrationReply(signatureBytes, message.requestingPeer)
+//        }
+//        val submitVerifMessage = waitForMessage(CommunityMessageType.UserVerificationSubmitMessage) as UserVerificationSubmitMessage
     }
 
     private fun getParticipantRole(): Role {

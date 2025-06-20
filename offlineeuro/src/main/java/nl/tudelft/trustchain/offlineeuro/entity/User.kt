@@ -7,6 +7,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.core.net.toUri
+
 import it.unisa.dia.gas.jpbc.Element
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -43,7 +44,6 @@ class User(
     transactionId: String? = "",
 ) : Participant(communicationProtocol, name, onDataChangeCallback, Role.User) {
     val wallet: Wallet
-
 
     init {
         communicationProtocol.participant = this
@@ -184,6 +184,7 @@ class User(
         publicKeyBank: Element,
         publicKeySender: Element
     ): String {
+//        onDataChangeCallback?.invoke("ENTERED RECEIVE FUNCTION")
         val usedRandomness = lookUpRandomness(publicKeySender) ?: return "Randomness Not found!"
         removeRandomness(publicKeySender)
         val transactionResult = Transaction.validate(transactionDetails, publicKeyBank, group, crs, isDeposit = false)
