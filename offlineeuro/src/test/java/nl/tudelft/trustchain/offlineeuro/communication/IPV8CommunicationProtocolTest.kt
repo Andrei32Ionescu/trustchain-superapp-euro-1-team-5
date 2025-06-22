@@ -21,6 +21,8 @@ import nl.tudelft.trustchain.offlineeuro.cryptography.BilinearGroup
 import nl.tudelft.trustchain.offlineeuro.cryptography.CRSGenerator
 import nl.tudelft.trustchain.offlineeuro.cryptography.GrothSahai
 import nl.tudelft.trustchain.offlineeuro.cryptography.PairingTypes
+import nl.tudelft.trustchain.offlineeuro.cryptography.Schnorr
+import nl.tudelft.trustchain.offlineeuro.cryptography.SchnorrSignature
 import nl.tudelft.trustchain.offlineeuro.db.AddressBookManager
 import nl.tudelft.trustchain.offlineeuro.entity.Address
 import nl.tudelft.trustchain.offlineeuro.entity.Bank
@@ -38,6 +40,7 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import java.math.BigInteger
+import java.util.UUID
 
 class IPV8CommunicationProtocolTest {
     private val context = null
@@ -50,15 +53,34 @@ class IPV8CommunicationProtocolTest {
 
     // Setup the TTP
     private val groupDescription = BilinearGroup(PairingTypes.FromFile)
-    private val ttpCRS = CRSGenerator.generateCRSMap(groupDescription)
     private val ttpPK = groupDescription.generateRandomElementOfG()
+    private val ttpCRS = CRSGenerator.generateCRSMap(groupDescription, ttpPK)
     private val ttpAddress = Address("TTP", Role.Bank, ttpPK, "TTPPublicKey".toByteArray())
 
     // Set up bank
     private val bankPK = groupDescription.generateRandomElementOfG()
+    private val bankPrivateKey = groupDescription.getRandomZr()
     private val bankAddress = Address("Bank", Role.Bank, bankPK, "BankPublicKey".toByteArray())
     private val blindSignatureRandomness = groupDescription.generateRandomElementOfG()
-    private val blindSignature = BigInteger("1236231234124321421")
+
+    // Create proper response
+    private val ttpPrivateKey = groupDescription.getRandomZr()
+    private val bankKeySignature = Schnorr.schnorrSignature(ttpPrivateKey, bankPK.toBytes(), groupDescription)
+    private val amount = 200L
+    private val serialNumber = UUID.randomUUID().toString()
+    private val timestamp = System.currentTimeMillis()
+    private val amountSignature = Schnorr.schnorrSignature(bankPrivateKey, amount.toString().toByteArray(), groupDescription)
+    private val hashString = "$serialNumber | $amount | $timestamp"
+    private val hashSignature = Schnorr.schnorrSignature(bankPrivateKey, hashString.hashCode().toString().toByteArray(), groupDescription)
+
+    private val blindSignatureResponse = ICommunicationProtocol.BlindSignatureResponse(
+        BigInteger("1236231234124321421"),
+        timestamp,
+        hashSignature,
+        bankPK.toBytes(),
+        bankKeySignature,
+        amountSignature
+    )
 
     // Set up receiver
     private val receiverPK = groupDescription.generateRandomElementOfG()
@@ -86,7 +108,7 @@ class IPV8CommunicationProtocolTest {
 
         `when`(community.sendGroupDescriptionAndCRS(any(), any(), any(), any())).then { }
 
-        `when`(community.registerAtTTP(any(), any(), any())).then { }
+        `when`(community.registerAtTTP(any(), any(), any(), any())).then { }
 
         `when`(community.sendBlindSignatureRandomnessReply(any(), any())).then { }
         `when`(community.sendBlindSignature(any(), any())).then { }
@@ -96,8 +118,15 @@ class IPV8CommunicationProtocolTest {
             community.messageList.add(message)
         }
 
-        `when`(community.getBlindSignature(any(), any(), any(), any())).then {
-            val message = BlindSignatureReplyMessage(blindSignature)
+        `when`(community.getBlindSignature(any(), any(), any(), any(), any())).then {
+            val message = BlindSignatureReplyMessage(
+                blindSignatureResponse.signature,
+                blindSignatureResponse.timestamp,
+                blindSignatureResponse.hashSignature,
+                blindSignatureResponse.bankPublicKey,
+                blindSignatureResponse.bankKeySignature,
+                blindSignatureResponse.amountSignature
+            )
             community.messageList.add(message)
         }
 
@@ -157,14 +186,15 @@ class IPV8CommunicationProtocolTest {
         `when`(participant.publicKey).thenReturn(publicKey)
         `when`(participant.name).thenReturn(userName)
         `when`(participant.group).thenReturn(groupDescription)
+        `when`(participant.role).thenReturn(Role.User)
 
         iPV8CommunicationProtocol.participant = participant
         iPV8CommunicationProtocol.messageList.add(
             AddressMessage(ttpAddress.name, ttpAddress.type, ttpAddress.publicKey.toBytes(), ttpAddress.peerPublicKey!!)
         )
-        iPV8CommunicationProtocol.register(userName, publicKey,ttpAddress.name)
+        iPV8CommunicationProtocol.register(userName, publicKey, ttpAddress.name, Role.User)
         // Assert that the registration request is sent correctly
-        verify(community, times(1)).registerAtTTP(userName, publicKey.toBytes(),ttpAddress.peerPublicKey!!)
+        verify(community, times(1)).registerAtTTP(userName, publicKey.toBytes(), ttpAddress.peerPublicKey!!, Role.User)
     }
 
     @Test
@@ -200,9 +230,9 @@ class IPV8CommunicationProtocolTest {
         val publicKey = groupDescription.generateRandomElementOfG()
         val challenge = BigInteger("12352132521521321521312")
         val amount = 200L
-        val signature = iPV8CommunicationProtocol.requestBlindSignature(publicKey, bankAddress.name, challenge, amount)
-        verify(community, times(1)).getBlindSignature(challenge, publicKey.toBytes(), bankAddress.peerPublicKey!!, amount)
-        Assert.assertEquals("The returned signature should be correct", blindSignature, signature)
+        val response = iPV8CommunicationProtocol.requestBlindSignature(publicKey, bankAddress.name, challenge, amount, serialNumber)
+        verify(community, times(1)).getBlindSignature(challenge, publicKey.toBytes(), bankAddress.peerPublicKey!!, amount, serialNumber)
+        Assert.assertEquals("The returned response should be correct", blindSignatureResponse, response)
     }
 
     @Test
@@ -212,15 +242,14 @@ class IPV8CommunicationProtocolTest {
 
         val challenge = BigInteger("321321521421097502142")
         val publicKey = groupDescription.generateRandomElementOfG()
-        val signature = BigInteger("2457921903721896428193682163921")
-        val amount = 200L
-        `when`(bank.createBlindSignature(challenge, publicKey, amount)).thenReturn(signature)
+        val serialNumber = UUID.randomUUID().toString()
+        `when`(bank.createBlindSignature(challenge, publicKey, amount, serialNumber)).thenReturn(blindSignatureResponse)
         `when`(bank.group).thenReturn(groupDescription)
-        val blindSignatureRequestMessage = BlindSignatureRequestMessage(challenge, publicKey.toBytes(), amount, receivingPeer)
+        val blindSignatureRequestMessage = BlindSignatureRequestMessage(challenge, publicKey.toBytes(), amount, serialNumber, receivingPeer)
         community.messageList.add(blindSignatureRequestMessage)
 
-        verify(bank, times(1)).createBlindSignature(challenge, publicKey, amount)
-        verify(community, times(1)).sendBlindSignature(signature, receivingPeer)
+        verify(bank, times(1)).createBlindSignature(challenge, publicKey, amount, serialNumber)
+        verify(community, times(1)).sendBlindSignature(blindSignatureResponse, receivingPeer)
     }
 
     @Test

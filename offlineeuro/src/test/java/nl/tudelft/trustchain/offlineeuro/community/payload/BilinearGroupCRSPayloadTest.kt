@@ -9,12 +9,12 @@ class BilinearGroupCRSPayloadTest {
     @Test
     fun serializeAndDeserializeTest() {
         val group = BilinearGroup()
-        val crs = CRSGenerator.generateCRSMap(group).first
 
         val groupElementBytes = group.toGroupElementBytes()
+        val ttpPK = group.generateRandomElementOfG()
+        val crs = CRSGenerator.generateCRSMap(group, ttpPK).first
         val crsBytes = crs.toCRSBytes()
-        val ttpPK = group.generateRandomElementOfG().toBytes()
-        val serializedPayload = BilinearGroupCRSPayload(groupElementBytes, crsBytes, ttpPK).serialize()
+        val serializedPayload = BilinearGroupCRSPayload(groupElementBytes, crsBytes, ttpPK.toBytes()).serialize()
         val deserializedPayload = BilinearGroupCRSPayload.deserialize(serializedPayload).first
         val deserializedGroupElementBytes = deserializedPayload.bilinearGroupElements
         val deserializedCRSBytes = deserializedPayload.crs
@@ -22,6 +22,6 @@ class BilinearGroupCRSPayloadTest {
 
         Assert.assertEquals("The group element bytes should be equal", groupElementBytes, deserializedGroupElementBytes)
         Assert.assertEquals("The CRS bytes should be equal", crsBytes, deserializedCRSBytes)
-        Assert.assertArrayEquals("The TTP PK bytes should be equal", ttpPK, deserializedTTPPKBytes)
+        Assert.assertArrayEquals("The TTP PK bytes should be equal", ttpPK.toBytes(), deserializedTTPPKBytes)
     }
 }

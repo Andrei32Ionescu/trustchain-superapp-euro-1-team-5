@@ -11,7 +11,7 @@ class BlindSignatureRequestPayloadTest {
         val publicKeyBytes = "NotAPublicKeyButJustSomeBytes".toByteArray()
         val amount = 200L
 
-        val serializedPayload = BlindSignatureRequestPayload(challenge, publicKeyBytes, amount).serialize()
+        val serializedPayload = BlindSignatureRequestPayload(challenge, publicKeyBytes, amount, "123456789").serialize()
         val deserializedPayload = BlindSignatureRequestPayload.deserialize(serializedPayload).first
         val deserializedChallenge = deserializedPayload.challenge
         val deserializedPublicKey = deserializedPayload.publicKeyBytes
