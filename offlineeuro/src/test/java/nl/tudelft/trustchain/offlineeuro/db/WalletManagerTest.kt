@@ -47,7 +47,12 @@ class WalletManagerTest {
                 Random.nextLong(),
                 group.generateRandomElementOfG(),
                 generateRandomSignature(),
-                arrayListOf()
+                arrayListOf(),
+                System.currentTimeMillis(),
+                generateRandomSignature(),
+                group.generateRandomElementOfG(),
+                generateRandomSignature(),
+                generateRandomSignature()
             )
 
         if (proofCount == 0) {
@@ -132,8 +137,8 @@ class WalletManagerTest {
         Assert.assertEquals("There should be a single spent WalletEntry", 1, allSpentEntriesAfterSpend.count())
         Assert.assertEquals(
             "The spent wallet entry should be the same as the retrieved one",
-            retrievedSpentWalletEntry,
-            allSpentEntriesAfterSpend.first()
+            retrievedSpentWalletEntry!!.copy( receivedTimestamp = 30L ),
+            allSpentEntriesAfterSpend.first().copy( receivedTimestamp = 30L )
         )
     }
 
