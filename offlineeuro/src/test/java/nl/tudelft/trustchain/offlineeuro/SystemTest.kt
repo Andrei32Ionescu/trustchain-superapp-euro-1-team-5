@@ -6,6 +6,7 @@ import io.mockk.every
 import io.mockk.mockkStatic
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.offlineeuro.sqldelight.Database
+import nl.tudelft.trustchain.offlineeuro.communication.ICommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.communication.IPV8CommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.community.OfflineEuroCommunity
 import nl.tudelft.trustchain.offlineeuro.community.message.AddressMessage
@@ -160,6 +161,8 @@ class SystemTest {
         // Prepare mock elements
         val byteArrayCaptor = argumentCaptor<ByteArray>()
         val challengeCaptor = argumentCaptor<BigInteger>()
+        val signatureCaptor = argumentCaptor<ICommunicationProtocol.BlindSignatureResponse>()
+        val serialNumberCaptor = argumentCaptor<String>()
         val userPeer = Mockito.mock(Peer::class.java)
 
         val userCommunity = userList[user]!!
@@ -177,15 +180,21 @@ class SystemTest {
             addMessageToList(user, randomnessReplyMessage)
 
             // Request the signature
-            `when`(userCommunity.getBlindSignature(challengeCaptor.capture(), any(), any(), eq(200L))).then {
+            `when`(userCommunity.getBlindSignature(challengeCaptor.capture(), any(), any(), eq(200L), serialNumberCaptor.capture())).then {
                 val challenge = challengeCaptor.lastValue
-                val signatureRequestMessage = BlindSignatureRequestMessage(challenge, publicKeyBytes, 200L, userPeer)
+                val serialNumber = serialNumberCaptor.lastValue
+                val signatureRequestMessage = BlindSignatureRequestMessage(challenge, publicKeyBytes, 200L, serialNumber, userPeer)
                 bankCommunity.messageList.add(signatureRequestMessage)
 
-                verify(bankCommunity, atLeastOnce()).sendBlindSignature(challengeCaptor.capture(), any())
-                val signature = challengeCaptor.lastValue
+                verify(bankCommunity, atLeastOnce()).sendBlindSignature(signatureCaptor.capture(), any())
+                val signature = signatureCaptor.lastValue
 
-                val signatureMessage = BlindSignatureReplyMessage(signature)
+                val signatureMessage = BlindSignatureReplyMessage(signature.signature,
+                                                                signature.timestamp,
+                                                                signature.hashSignature,
+                                                                signature.bankPublicKey,
+                                                                signature.bankKeySignature,
+                                                                signature.amountSignature)
                 addMessageToList(user, signatureMessage)
             }
         }
@@ -194,7 +203,7 @@ class SystemTest {
 
         // User must make two requests
         verify(userCommunity, atLeastOnce()).getBlindSignatureRandomness(publicKeyBytes, bank.name.toByteArray())
-        verify(userCommunity, atLeastOnce()).getBlindSignature(any(), eq(publicKeyBytes), eq(bank.name.toByteArray()), eq(200L))
+        verify(userCommunity, atLeastOnce()).getBlindSignature(any(), eq(publicKeyBytes), eq(bank.name.toByteArray()), eq(200L), any())
 
         // Bank must respond twice
         verify(bankCommunity, atLeastOnce()).sendBlindSignatureRandomnessReply(any(), eq(userPeer))
@@ -311,7 +320,8 @@ class SystemTest {
         bank = Bank("Bank", group, communicationProtocol, null, depositedEuroManager, runSetup = false)
         bank.crs = crs
         addressBookManager.insertAddress(Address(ttp.name, Role.TTP, ttp.publicKey, "SomeTTPPubKey".toByteArray()))
-        ttp.registeredUserManager.addRegisteredUser(bank.name, bank.publicKey, "testBank")
+        val (success, signature) = ttp.registerBank(bank.publicKey, "testbank", Role.Bank)
+        bank.ttpSignatureOnPublicKey = signature
         //ttp.registerUser(bank.name, bank.publicKey, "", bank.publicKey.toBytes())
     }
 
