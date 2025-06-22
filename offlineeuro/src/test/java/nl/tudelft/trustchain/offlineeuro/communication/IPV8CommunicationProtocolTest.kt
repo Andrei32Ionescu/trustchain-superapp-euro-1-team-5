@@ -22,7 +22,6 @@ import nl.tudelft.trustchain.offlineeuro.cryptography.CRSGenerator
 import nl.tudelft.trustchain.offlineeuro.cryptography.GrothSahai
 import nl.tudelft.trustchain.offlineeuro.cryptography.PairingTypes
 import nl.tudelft.trustchain.offlineeuro.cryptography.Schnorr
-import nl.tudelft.trustchain.offlineeuro.cryptography.SchnorrSignature
 import nl.tudelft.trustchain.offlineeuro.db.AddressBookManager
 import nl.tudelft.trustchain.offlineeuro.entity.Address
 import nl.tudelft.trustchain.offlineeuro.entity.Bank
@@ -146,8 +145,6 @@ class IPV8CommunicationProtocolTest {
 
         // Mock the Log class before each test
         logMock = mockStatic(Log::class.java)
-        logMock.`when`<Int> { Log.d(Mockito.anyString(), Mockito.anyString()) }
-            .thenReturn(0)
     }
 
     @After
