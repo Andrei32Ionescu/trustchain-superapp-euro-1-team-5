@@ -67,9 +67,14 @@ object CallbackLibrary {
         // Update wallet tokens table
         val tokensList = view.findViewById<LinearLayout>(R.id.user_home_tokens_list)
         if (tokensList != null) {
-            val walletEntries = user.wallet.getAllWalletEntriesToSpend() +
-                user.wallet.getAllWalletEntriesToDoubleSpend()
-            TableHelpers.addWalletTokensToTable(tokensList, walletEntries.distinctBy { it.digitalEuro.serialNumber }, user, context)
+            val walletEntries = user.wallet.getAllWalletEntriesToSpend()
+            TableHelpers.addWalletTokensToTable(tokensList, walletEntries, user, context)
+        }
+
+        val dsTokensList = view.findViewById<LinearLayout>(R.id.user_home_ds_tokens_list)
+        if (dsTokensList != null) {
+            val dsWalletEntries = user.wallet.getAllWalletEntriesToDoubleSpend()
+            TableHelpers.addWalletTokensToTable(dsTokensList, dsWalletEntries, user, context)
         }
 
         val addressList = view.findViewById<LinearLayout>(R.id.user_home_addresslist)

@@ -35,11 +35,13 @@ data class WalletEntry(
         Log.d("Wallet", "Transaction Info:")
         Log.d("Wallet", "Time passed: $timePassed")
         val currentTransferCount = calculateTransferCount()
+        Log.d("Current transfer count:", "$currentTransferCount")
 
         var fee = (timePassed / 24.0) * 0.05
         Log.d("Wallet", "Calculated fee: $fee")
         // No fee for the first 3 transactions
         if (currentTransferCount > 2) {
+            Log.d("TAXED", "TAX")
             fee += (currentTransferCount - 2) * 0.05
         }
 
@@ -105,6 +107,15 @@ class Wallet(
         // Check if this token is spendable (not already spent)
 //        if (walletEntry.timesSpent > 0) return null
 
+        Log.d("SPEND DIGITAL EURO CONTENTS", "${digitalEuro.amount}" +
+            "withdrawal timestamp: ${digitalEuro.withdrawalTimestamp}" +
+            "current time: ${System.currentTimeMillis()}" +
+            "proof size: ${digitalEuro.proofs.size}")
+        Log.d("SPEND WITHDRAWN DIGITAL EURO CONTENTS", "${walletEntry.digitalEuro.amount}" +
+            "withdrawal timestamp: ${walletEntry.digitalEuro.withdrawalTimestamp}" +
+            "current time: ${System.currentTimeMillis()}" +
+            "proof size: ${digitalEuro.proofs.size}")
+
         Log.d("Wallet", "Spending euro with times spent: ${walletEntry.timesSpent}")
         println("Spending euro with times spent: ${walletEntry.timesSpent}")
         walletManager.incrementTimesSpent(digitalEuro)
@@ -134,7 +145,15 @@ class Wallet(
         crs: CRS,
         deposit: Boolean
     ): TransactionDetails? {
+        Log.d("DS DIGITAL EURO CONTENTS", "${digitalEuro.amount}" +
+            "withdrawal timestamp: ${digitalEuro.withdrawalTimestamp}" +
+            "current time: ${System.currentTimeMillis()}" +
+            "proof size: ${digitalEuro.proofs.size}")
         val walletEntry = walletManager.getWalletEntryByDigitalEuro(digitalEuro) ?: return null
+        Log.d("DS WITHDRAWN DIGITAL EURO CONTENTS", "${walletEntry.digitalEuro.amount}" +
+            "withdrawal timestamp: ${walletEntry.digitalEuro.withdrawalTimestamp}" +
+            "current time: ${System.currentTimeMillis()}" +
+            "proof size: ${digitalEuro.proofs.size}")
         // Check if this token can be double spent (spent exactly once)
         if (walletEntry.timesSpent != 1L) return null
 
@@ -146,6 +165,8 @@ class Wallet(
 
         // Calculate the fee and update the value
         val valueAfterFee = walletEntry.getValueAfterFee()
+
+        Log.d("Wallet", "Spending euro with times spent: ${walletEntry.timesSpent}, value after fee: $valueAfterFee")
 
         // Create a new digital euro with the updated value
         val updatedEuro = digitalEuro.copy(amount = valueAfterFee)

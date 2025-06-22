@@ -6,6 +6,15 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_gravity="center">
 
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/user_home_scroll"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/reset_container">
 
         <LinearLayout
             android:id="@+id/user_home_layout"
@@ -92,47 +101,144 @@
                         android:layout_height="match_parent"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
+                        android:weightSum="10"
                         android:background="@color/colorPrimary">
 
                         <TextView
+                            style="@style/TableCell"
                             android:layout_width="0dp"
                             android:layout_height="match_parent"
-                            android:layout_weight="0.2"
+                            android:layout_weight="2"
                             android:gravity="center"
+                            android:maxLines="1"
                             android:text="Amount"
                             android:textColor="@color/white" />
 
                         <TextView
+                            style="@style/TableCell"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:text="Status"
                             android:gravity="center"
-                            android:layout_weight="0.2"
+                            android:maxLines="1"
+                            android:layout_weight="2"
                             android:textColor="@color/white" />
 
                         <TextView
+                            style="@style/TableCell"
                             android:id="@+id/textView"
-                            android:layout_width="15dp"
-                            android:layout_height="36dp"
-                            android:layout_weight="1"
-                            android:text="timestamp" />
-
-                        <TextView
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_weight="0.3"
+                            android:maxLines="1"
+                            android:layout_weight="2"
+                            android:text="Timestamp"
+                            android:textColor="@color/white" />
+
+                        <TextView
+                            style="@style/TableCell"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="2"
                             android:gravity="center"
+                            android:maxLines="1"
                             android:text="Serial#"
                             android:textColor="@color/white" />
 
                         <TextView
+                            style="@style/TableCell"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_weight="0.3"
+                            android:layout_weight="2"
                             android:gravity="center"
+                            android:maxLines="1"
                             android:text="Actions"
                             android:textColor="@color/white" />
 
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginHorizontal="10dp">
+
+                <LinearLayout
+                    android:id="@+id/ds_section_header"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_horizontal"
+                    android:paddingVertical="8dp"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:id="@+id/ds_section_title"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Tokens you can double-spend"
+                        android:textSize="16sp"
+                        android:textStyle="bold"/>
+
+                    <ImageView
+                        android:id="@+id/ds_section_arrow"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_baseline_outgoing_24"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/user_home_ds_tokens_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:weightSum="10"
+                        android:background="@color/colorPrimary">
+
+                        <TextView
+                            style="@style/TableCell"
+                            android:layout_weight="2"
+                            android:text="Amount"
+                            android:maxLines="1"
+                            android:textColor="@color/white"/>
+
+                        <TextView
+                            style="@style/TableCell"
+                            android:layout_weight="2"
+                            android:text="Status"
+                            android:maxLines="1"
+                            android:textColor="@color/white"/>
+
+                        <TextView
+                            style="@style/TableCell"
+                            android:layout_weight="2"
+                            android:text="Timestamp"
+                            android:maxLines="1"
+                            android:textColor="@color/white"/>
+
+                        <TextView
+                            style="@style/TableCell"
+                            android:layout_weight="2"
+                            android:text="Serial#"
+                            android:maxLines="1"
+                            android:textColor="@color/white"/>
+
+                        <TextView
+                            style="@style/TableCell"
+                            android:layout_weight="2"
+                            android:text="Actions"
+                            android:maxLines="1"
+                            android:textColor="@color/white"/>
                     </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
@@ -243,7 +349,9 @@
                 android:layout_gravity="center_horizontal"
                 android:text="Sync Address list" />
         </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
     <LinearLayout
+        android:id="@+id/reset_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_horizontal"
