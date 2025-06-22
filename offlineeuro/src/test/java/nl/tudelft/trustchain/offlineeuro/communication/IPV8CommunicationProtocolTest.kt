@@ -31,10 +31,13 @@ import nl.tudelft.trustchain.offlineeuro.entity.TransactionDetails
 import nl.tudelft.trustchain.offlineeuro.entity.TransactionDetailsBytes
 import nl.tudelft.trustchain.offlineeuro.entity.User
 import nl.tudelft.trustchain.offlineeuro.enums.Role
+import org.junit.After
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
+import org.mockito.MockedStatic
 import org.mockito.Mockito
+import org.mockito.Mockito.mockStatic
 import org.mockito.Mockito.`when`
 import org.mockito.kotlin.any
 import org.mockito.kotlin.times
@@ -96,6 +99,7 @@ class IPV8CommunicationProtocolTest {
     private val receivingPeer = Mockito.mock(Peer::class.java)
 
     private val iPV8CommunicationProtocol = IPV8CommunicationProtocol(addressBookManager, community)
+    private lateinit var logMock: MockedStatic<Log>
 
     @Before
     fun setup() {
@@ -139,6 +143,17 @@ class IPV8CommunicationProtocolTest {
             val message = TransactionResultMessage(transactionResult)
             community.messageList.add(message)
         }
+
+        // Mock the Log class before each test
+        logMock = mockStatic(Log::class.java)
+        logMock.`when`<Int> { Log.d(Mockito.anyString(), Mockito.anyString()) }
+            .thenReturn(0)
+    }
+
+    @After
+    fun tearDown() {
+        // Close the mock after each test
+        logMock.close()
     }
 
     @Test
