@@ -7,7 +7,7 @@ A variable amount of money can be withdrawn from the bank. Now, users are not li
 ## 2 - EUDI-Based Secure User Registration
 A more secure user registration process has been devised by connecting the registration to the EUDI wallet: 
 * The user consents to share a Verifiable Credential that currently only contains the legal name of the user. 
-* The requested data resides on the TTP side and can be tweaked only by the TTP, resembling a real-world scenario. 
+* The TTP creates a request for the data it needs and sends it to the user. 
 * After the user shares their data, the TTP receives a confirmation and checks whether the requested data actually was shared and is valid. 
 * If successful, the user is redirected to their home page, where they can perform transactions.
 
