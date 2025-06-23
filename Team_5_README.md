@@ -1,0 +1,27 @@
+# Team 5 - OfflineEuro Module
+During the available timeframe of the Blockchain Engineering course, team 5 worked on the OfflineEuro module. Our contributions are the following:
+
+## 1 - Secured Variable Value Withdrawals
+A variable amount of money can be withdrawn from the bank. Now, users are not limited anymore to only withdrawing a token with a value of €1. However, this also means that malicious users could now modify the actual value of the token. To mitigate this, the amount is ...
+
+## 2 - EUDI-Based Secure User Registration
+A more secure user registration process has been devised by connecting the registration to the EUDI wallet: 
+* The user consents to share a Verifiable Credential that currently only contains the legal name of the user. 
+* The requested data resides on the TTP side and can be tweaked only by the TTP, resembling a real-world scenario. 
+* After the user shares their data, the TTP receives a confirmation and checks whether the requested data actually was shared and is valid. 
+* If successful, the user is redirected to their home page, where they can perform transactions.
+
+## 3 - Improved User Frontend
+The user frontend was improved, and additional functionality was added. A user may now select what token they want to spend, and upon doing that, have to pick a specific user from their peer list to send the token to. This simplifies the interface, while still allowing the user to perform all existing actions. The token can also be deposited to a specific bank, where the user will have to choose a bank from the available ones to deposit their token to. 
+
+For debugging purposes, it is now easier to see what tokens you can doubly spend. Tokens that may be doubly spent are tokens that a user has received and spent once already. They are now separated from the tokens a user has that were not spent yet and reside in a section that can be toggled to show them or hide them back. Just as the normal tokens, they may be doubly spent to a specific user, or deposited to the bank. 
+
+Lastly, the user interface is now scrollable. Since not every token is the same anymore, with just a couple of transactions the user's home page might fill up pretty quickly, and thus they need the ability to scroll through it.
+
+### Normal use-case flow:
+...
+
+
+### Requirements:
+- A browser on which adding your user data to the EUDI wallet app works (we had problems with Quant, ...). 
+- The EUDI wallet apk (the 25.07 release, found [here](https://github.com/eu-digital-identity-wallet/eudi-app-android-wallet-ui/releases/tag/Wallet%2FDemo_Version%3D2025.05.27-Demo_Build%3D27))
