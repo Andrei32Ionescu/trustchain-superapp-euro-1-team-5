@@ -188,12 +188,20 @@ object TableHelpers {
         // Action buttons
         val buttonWrapper = LinearLayout(context)
         val params = layoutParams(0.3f)
-        buttonWrapper.gravity = Gravity.CENTER_HORIZONTAL
-        buttonWrapper.orientation = LinearLayout.HORIZONTAL
+        buttonWrapper.gravity = Gravity.CENTER
+        buttonWrapper.orientation = LinearLayout.VERTICAL
         buttonWrapper.layoutParams = params
 
         val sendButton = Button(context)
         val depositButton = Button(context)
+
+        val lp = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT)
+        lp.topMargin = 4
+
+        sendButton.layoutParams = lp
+        depositButton.layoutParams = lp
 
         applyButtonStyling(sendButton, context)
         applyButtonStyling(depositButton, context)

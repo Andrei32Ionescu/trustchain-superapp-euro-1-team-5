@@ -36,7 +36,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?,?);
 getWalletEntryByDescriptor:
 SELECT *
 FROM Wallet
-WHERE serialNumber = ? AND firstTheta1 = ? AND signature = ? AND amount = ?;
+WHERE serialNumber = ? AND firstTheta1 = ? AND signature = ? AND amount = ? AND previousProofs = ?;
 
 getAllWalletEntries:
 SELECT *

@@ -125,6 +125,7 @@ class WalletManager(
             digitalEuro.firstTheta1.toBytes(),
             serialize(digitalEuro.signature)!!,
             digitalEuro.amount,
+            serialize(digitalEuro.proofs),
             walletEntryMapper
         ).executeAsList().sortedByDescending { entry -> entry.receivedTimestamp }.firstOrNull()
     }

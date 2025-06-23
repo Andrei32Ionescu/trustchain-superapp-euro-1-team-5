@@ -105,7 +105,6 @@ class Wallet(
         // Check if this token is spendable (not already spent)
 //        if (walletEntry.timesSpent > 0) return null
 
-        Log.d("Wallet", "Spending euro with times spent: ${walletEntry.timesSpent}")
         println("Spending euro with times spent: ${walletEntry.timesSpent}")
         walletManager.incrementTimesSpent(digitalEuro)
 

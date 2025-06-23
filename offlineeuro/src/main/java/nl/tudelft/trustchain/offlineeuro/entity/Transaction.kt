@@ -219,7 +219,9 @@ object Transaction {
         // Only validate amount matching for non-deposits
         if (!isDeposit) {
             // Verify the signed amount is currently of the expected value
-            if (!(digitalEuro.amount >= getValueAfterFee(digitalEuro)) || !(digitalEuro.amount <= getValueUpperBound(digitalEuro))) {
+            val upper = getValueUpperBound(digitalEuro)
+            val shouldBe = getValueAfterFee(digitalEuro)
+            if (!(digitalEuro.amount >= shouldBe) || !(digitalEuro.amount <= upper)) {
                 Log.d("OfflineEuro", "Bank amount mismatch: ${digitalEuro.amount} != ${getValueAfterFee(digitalEuro)}")
                 return false
             }
