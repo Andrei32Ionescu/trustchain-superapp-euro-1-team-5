@@ -10,11 +10,14 @@ The hash makes forging a new amount value (e.g. by stealing one from a previous 
 To ensure an attacker cannot forge all details by providing a fake bank public key, the token now includes a TTP's signature over the issuer's public key.
 
 ## 2 - EUDI-Based Secure User Registration
-A more secure user registration process has been devised by connecting the registration to the EUDI wallet: 
-* The user consents to share a Verifiable Credential that currently only contains the legal name of the user. 
-* The TTP creates a request for the data it needs and sends it to the user. 
-* After the user shares their data, the TTP receives a confirmation and checks whether the requested data actually was shared and is valid. 
-* If successful, the user is redirected to their home page, where they can perform transactions.
+A more secure user registration process has been devised by connecting the registration to the EUDI wallet:
+* The user first creates an EUDI account and inputs their necessary data to the app through the first option: `PID`;
+* The user then begins the registration process in the home page and is prompted to verify their credentials;
+* The TTP creates a request for the data it needs and sends it to the user (currently requests only the "legal name" of a user);
+* The user consents to share a Verifiable Credential that currently only contains the legal name of the user;
+* After the user shares their data, the TTP receives a confirmation and checks whether the requested data actually was shared and is valid. The user must go back manually to the superapp, as they will not be redirected automatically.
+* If successful, the user is redirected to the user home page, where they can perform transactions.
+* If not, the user is not redirected to the user home page.
 
 ## 3 - Improved User Frontend
 The user frontend was improved, and additional functionality was added. A user may now select what token they want to spend, and upon doing that, have to pick a specific user from their peer list to send the token to. This simplifies the interface, while still allowing the user to perform all existing actions. The token can also be deposited to a specific bank, where the user will have to choose a bank from the available ones to deposit their token to. 
@@ -39,8 +42,6 @@ In order to ensure that this mechanism cannot be forged, we have ensured that al
 
 
 
-
-
 ### Requirements:
-- A browser on which adding your user data to the EUDI wallet app works (we had problems with Quant, ...). 
+- A browser on which adding your user data to the EUDI wallet app works (we had problems with Quant). 
 - The EUDI wallet apk (the 25.07 release, found [here](https://github.com/eu-digital-identity-wallet/eudi-app-android-wallet-ui/releases/tag/Wallet%2FDemo_Version%3D2025.05.27-Demo_Build%3D27))
