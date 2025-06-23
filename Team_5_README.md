@@ -2,7 +2,12 @@
 During the available timeframe of the Blockchain Engineering course, team 5 worked on the OfflineEuro module. Our contributions are the following:
 
 ## 1 - Secured Variable Value Withdrawals
-A variable amount of money can be withdrawn from the bank. Now, users are not limited anymore to only withdrawing a token with a value of €1. However, this also means that malicious users could now modify the actual value of the token. To mitigate this, the amount is ...
+A variable amount of money can be withdrawn from the bank. Now, users are not limited anymore to only withdrawing a token with a value of €1. However, this also means that malicious users could now modify the actual value of the token.
+
+To mitigate this, the amount is added to a new composite hash, alongside the coin's withdrawal timestamp and serial number. 
+The hash makes forging a new amount value (e.g. by stealing one from a previous token) impossible. The hash is then signed by the issuing bank, and included in the token.
+
+To ensure an attacker cannot forge all details by providing a fake bank public key, the token now includes a TTP's signature over the issuer's public key.
 
 ## 2 - EUDI-Based Secure User Registration
 A more secure user registration process has been devised by connecting the registration to the EUDI wallet: 
@@ -18,8 +23,22 @@ For debugging purposes, it is now easier to see what tokens you can doubly spend
 
 Lastly, the user interface is now scrollable. Since not every token is the same anymore, with just a couple of transactions the user's home page might fill up pretty quickly, and thus they need the ability to scroll through it.
 
-### Normal use-case flow:
-...
+## 4 - Transaction Fees and Depreciation
+
+Since a doubly spent token can only be detected when it is deposited, it can cause losses to many users if kept in the economy for too long.
+
+To discourage users from holding on to old, undeposited tokens, we have implemented two separate features:
+
+- Transaction Fees: Transfering a coin more than 3 times incurs a flat transaction fee. This discourages both old tokens and penalizes tokens that have been rapidly transferred between multiple users in a short amount of time.
+- Depreciation: Tokens linearly lose their value over time. This is done to ensure that depositing a token now is preferable to holding old, possibly double-spent, tokens.
+
+In order to ensure that this mechanism cannot be forged, we have ensured that all properties that are needed to calculate a coin's present value have been made cryptographically secure:
+
+- The transaction fee is based on the length of the Groth-Sahai proof chain.
+- The initial timestamp is included in the serial hash and is signed by the bank at withdrawal.
+
+
+
 
 
 ### Requirements:
