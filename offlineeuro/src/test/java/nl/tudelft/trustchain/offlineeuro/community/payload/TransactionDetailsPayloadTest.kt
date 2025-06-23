@@ -2,6 +2,7 @@ package nl.tudelft.trustchain.offlineeuro.community.payload
 
 import nl.tudelft.trustchain.offlineeuro.cryptography.BilinearGroup
 import nl.tudelft.trustchain.offlineeuro.cryptography.GrothSahaiProof
+import nl.tudelft.trustchain.offlineeuro.cryptography.Schnorr
 import nl.tudelft.trustchain.offlineeuro.cryptography.SchnorrSignature
 import nl.tudelft.trustchain.offlineeuro.cryptography.TransactionProof
 import nl.tudelft.trustchain.offlineeuro.entity.DigitalEuro
@@ -9,6 +10,7 @@ import nl.tudelft.trustchain.offlineeuro.entity.TransactionDetails
 import org.junit.Assert
 import org.junit.Test
 import java.math.BigInteger
+import java.util.UUID
 
 class TransactionDetailsPayloadTest {
     private val group = BilinearGroup()
@@ -83,12 +85,47 @@ class TransactionDetailsPayloadTest {
             proofs.add(generateGrothSahaiProof())
         }
 
+        // Generate proper signatures for the new fields
+        val bankPrivateKey = group.getRandomZr()
+        val bankPublicKey = group.g.powZn(bankPrivateKey)
+        val amount = 200L
+        val timestamp = System.currentTimeMillis()
+        val serialNumber = UUID.randomUUID().toString()
+
+        // Sign amount
+        val amountSignature = Schnorr.schnorrSignature(
+            bankPrivateKey,
+            amount.toString().toByteArray(Charsets.UTF_8),
+            group
+        )
+
+        // Sign hash
+        val hashString = "$serialNumber | $amount | $timestamp"
+        val hashSignature = Schnorr.schnorrSignature(
+            bankPrivateKey,
+            hashString.hashCode().toString().toByteArray(Charsets.UTF_8),
+            group
+        )
+
+        // Mock TTP signature on bank key
+        val ttpPrivateKey = group.getRandomZr()
+        val bankKeySignature = Schnorr.schnorrSignature(
+            ttpPrivateKey,
+            bankPublicKey.toBytes(),
+            group
+        )
+
         return DigitalEuro(
-            "Test Serialnumber",
-            200L,
+            serialNumber,
+            amount,
             group.generateRandomElementOfG(),
             generateSignature(),
-            proofs
+            proofs,
+            timestamp,
+            hashSignature,
+            bankPublicKey,
+            bankKeySignature,
+            amountSignature
         )
     }
 

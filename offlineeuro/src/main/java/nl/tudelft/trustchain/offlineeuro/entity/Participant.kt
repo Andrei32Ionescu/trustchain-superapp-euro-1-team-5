@@ -15,7 +15,7 @@ abstract class Participant(
     var onDataChangeCallback: ((String?) -> Unit)? = null,
     val role: Role
 ) {
-    protected lateinit var privateKey: Element
+    public lateinit var privateKey: Element
     lateinit var publicKey: Element
     lateinit var group: BilinearGroup
     val randomizationElementMap: HashMap<Element, Element> = hashMapOf()
