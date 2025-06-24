@@ -71,7 +71,6 @@ class User(
         val transactionDetails = wallet.spendSpecificEuro(digitalEuro, randomizationElements, group, crs, deposit)
             ?: throw Exception("Cannot spend this specific euro")
 
-        Log.d("TransactionDetails", transactionDetails.toString())
         val result = communicationProtocol.sendTransactionDetails(nameReceiver, transactionDetails)
         onDataChangeCallback?.invoke(result)
         return result
@@ -170,12 +169,10 @@ class User(
     }
 
     fun onReceivedRequestUserVerification(deeplink: String, transactionId: String) {
-        Log.d("EUDI", "We are inside user class after having received user verification request")
         onReqUserVerif!!.invoke(deeplink, transactionId)
     }
 
     fun onReceivedTTPRegisterReply() {
-        Log.d("EUDI", "hello")
         onRegister!!.invoke()
     }
 

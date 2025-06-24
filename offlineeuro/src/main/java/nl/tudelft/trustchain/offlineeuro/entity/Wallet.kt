@@ -1,13 +1,11 @@
 package nl.tudelft.trustchain.offlineeuro.entity
 
-import android.util.Log
 import it.unisa.dia.gas.jpbc.Element
 import nl.tudelft.trustchain.offlineeuro.cryptography.BilinearGroup
 import nl.tudelft.trustchain.offlineeuro.cryptography.CRS
 import nl.tudelft.trustchain.offlineeuro.cryptography.RandomizationElements
 import nl.tudelft.trustchain.offlineeuro.cryptography.SchnorrSignature
 import nl.tudelft.trustchain.offlineeuro.db.WalletManager
-import java.io.Console
 
 data class WalletEntry(
     val digitalEuro: DigitalEuro,
@@ -32,12 +30,9 @@ data class WalletEntry(
         val currentTime = System.currentTimeMillis()
         val referenceTimestamp = digitalEuro.withdrawalTimestamp
         val timePassed = (currentTime - referenceTimestamp) / (1000.0 * 60 * 60)
-        Log.d("Wallet", "Transaction Info:")
-        Log.d("Wallet", "Time passed: $timePassed")
         val currentTransferCount = calculateTransferCount()
 
-        var fee = (timePassed / 24.0) * 0.05
-        Log.d("Wallet", "Calculated fee: $fee")
+        var fee = (timePassed / 24.0) * 0.0
         // No fee for the first 3 transactions
         if (currentTransferCount > 2) {
             fee += (currentTransferCount - 2) * 0.05
@@ -102,10 +97,6 @@ class Wallet(
     ): TransactionDetails? {
         val walletEntry = walletManager.getWalletEntryByDigitalEuro(digitalEuro) ?: return null
 
-        // Check if this token is spendable (not already spent)
-//        if (walletEntry.timesSpent > 0) return null
-
-        println("Spending euro with times spent: ${walletEntry.timesSpent}")
         walletManager.incrementTimesSpent(digitalEuro)
 
         if (deposit == true) {
@@ -114,8 +105,6 @@ class Wallet(
 
         // Calculate the fee and update the value
         val valueAfterFee = walletEntry.getValueAfterFee()
-
-        Log.d("Wallet", "Spending euro with times spent: ${walletEntry.timesSpent}, value after fee: $valueAfterFee")
 
         // Create a new digital euro with the updated value
         val updatedEuro = digitalEuro.copy(amount = valueAfterFee)
@@ -173,8 +162,6 @@ class Wallet(
         // Create a new digital euro with the updated value
         val updatedEuro = euro.copy(amount = valueAfterFee)
         val updatedEntry = walletEntry.copy( digitalEuro = updatedEuro )
-
-        Log.d("Wallet", "Spending euro with times spent: ${walletEntry.timesSpent}, value after fee: $valueAfterFee")
 
         return Transaction.createTransaction(privateKey, publicKey, updatedEntry, randomizationElements, bilinearGroup, crs)
     }

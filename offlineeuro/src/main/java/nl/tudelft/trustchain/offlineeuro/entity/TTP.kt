@@ -4,10 +4,8 @@ import android.content.Context
 import android.util.Log
 import it.unisa.dia.gas.jpbc.Element
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -58,12 +56,8 @@ class TTP(
     private val localScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     fun registerUser(
-//        name: String,
         transactionId: String,
-//        role: Role
     ): Boolean {
-        // TODO HANDLE USER REGISTRATION
-        Log.d("EUDI", "register user")
         localScope.launch {
             try {
                 val vpToken = getVPToken(transactionId)  ?: return@launch
@@ -71,7 +65,6 @@ class TTP(
                 val attributes = validateVPToken(vpToken) ?: return@launch
 
                 val legalName = attributes.optString("family_name")
-                Log.d("EUDI", "got name")
                 val user = nonRegisteredUserManager.getNonRegisteredUserByTransactionId(transactionId)
                 // delete user from non-registered database
                 nonRegisteredUserManager.deleteNonRegisteredUserByTransactionId(transactionId)
@@ -81,32 +74,12 @@ class TTP(
                 val result = registeredUserManager.addRegisteredUser(userName!!, publicKey!!, legalName)
                 onDataChangeCallback?.invoke("Registered $name")
                 communicationProtocol.sendRegisterAtTTPReplyMessage(result.toString(), overlayPK!!)
-
-                Log.d("EUDI", "SUCESSS Family name: $legalName")
-
             } catch (e: Exception) {
-                Log.e("Error", "EUDI authentication failed", e)
                 val user = nonRegisteredUserManager.getNonRegisteredUserByTransactionId(transactionId)
                 val peerPublicKeyBytes = user?.publicKey!!.toBytes()
                 communicationProtocol.sendRegisterAtTTPReplyMessage("false", peerPublicKeyBytes)
             }
         }
-
-//        val result = registeredUserManager.addRegisteredUser(name, publicKey)
-//        onDataChangeCallback?.invoke("Registered $name")
-//
-//        var bankKeySignature: SchnorrSignature? = null
-//        if (role == Role.Bank) {
-//            // Sign the bank's public key
-//            bankKeySignature = Schnorr.schnorrSignature(
-//                privateKey,
-//                publicKey.toBytes(),
-//                group
-//            )
-//            signedBankKeys[publicKey] = bankKeySignature
-//        }
-//        return Pair(result, bankKeySignature)
-
         return true;
     }
 
@@ -128,69 +101,17 @@ class TTP(
         return Pair(result, bankKeySignature)
     }
 
-//    fun registerUser(
-//        name: String,
-//        transactionId: String,
-//        role: Role
-//    ): Deferred<Pair<Boolean, SchnorrSignature?>> =
-//        // TODO HANDLE USER REGISTRATION
-//        CoroutineScope(Dispatchers.Default).async {
-//            Log.d("EUDI", "register user")
-//            var bankKeySignature: SchnorrSignature? = null
-//            val ok: Boolean = try {
-//                val vpToken = getVPToken(transactionId)  ?: return@async Pair(false, null)
-//
-//                val attributes = validateVPToken(vpToken) ?: return@async Pair(false, null)
-//
-//                val legalName = attributes.optString("family_name")
-//                Log.d("EUDI", "got name")
-//                val user = nonRegisteredUserManager.getNonRegisteredUserByTransactionId(transactionId)
-//                // delete user from non-registered database
-//                nonRegisteredUserManager.deleteNonRegisteredUserByTransactionId(transactionId)
-//                val userName = user?.name
-//                val publicKey = user?.publicKey
-//                val overlayPK = user?.overlayPK // The peer's address over the ipv8 network
-//                val result = registeredUserManager.addRegisteredUser(userName!!, publicKey!!, legalName)
-//                onDataChangeCallback?.invoke("Registered $name")
-//                communicationProtocol.sendRegisterAtTTPReplyMessage(result.toString(), overlayPK!!)
-////                onDataChangeCallback?.invoke("Registered $name")
-//
-////                var bankKeySignature: SchnorrSignature? = null
-//                if (role == Role.Bank) {
-//                    // Sign the bank's public key
-//                    bankKeySignature = Schnorr.schnorrSignature(
-//                        privateKey,
-//                        publicKey.toBytes(),
-//                        group
-//                    )
-//                    signedBankKeys[publicKey] = bankKeySignature
-//                }
-//                Log.d("EUDI", "SUCESSS Family name: $legalName")
-//                result
-//            } catch (e: Exception) {
-//                Log.e("Error", "EUDI authentication failed", e)
-//                val user = nonRegisteredUserManager.getNonRegisteredUserByTransactionId(transactionId)
-//                val peerPublicKeyBytes = user?.publicKey!!.toBytes()
-//                communicationProtocol.sendRegisterAtTTPReplyMessage("false", peerPublicKeyBytes)
-//                false
-//            }
-//            Pair(ok, bankKeySignature)
-//        }
-
     fun sendUserRequestData(
-//        data: Pair<String, String>,
         name: String,
         publicKey: Element,
         overlayPK: ByteArray
     ) {
-        Log.d("EUDI", "send user request data")
         localScope.launch {
             try {
                 val (deeplink, transactionId) = getEUDI()!!
                 val result = nonRegisteredUserManager.addNonRegisteredUser(name, publicKey, transactionId, overlayPK)
                 communicationProtocol.sendRequestUserVerificationMessage(transactionId, deeplink, overlayPK)
             } catch (e: Exception) {
-                Log.e("Error", "Requesting EUDI data failed", e)
                 throw e
             }
         }
@@ -248,13 +169,6 @@ class TTP(
         // Send authorization request to the wallet to handle it
         val walletRequestURL = "eudi-openid4vp://?client_id=$clientId&request_uri=$requestURI&request_uri_method=$requestURIMethod"
 
-//        val intent = Intent(Intent.ACTION_VIEW).apply {
-//            data = walletRequestURL.toUri()
-//            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-//        }
-
-//        activityResultLauncher.launch(intent)
-
         return Pair(walletRequestURL, transactionId)
     }
 
@@ -305,49 +219,36 @@ class TTP(
         val maxRetries = 150
         val delayBetweenRetries = 200L
 
-        Log.d("EUDI", "Get VP TOken")
-
         while (currentAttempt < maxRetries) {
             try {
-                Log.d("EUDI", "Attempting to get VP token, attempt ${currentAttempt + 1}/$maxRetries")
-
                 val vpToken = requestVPToken(transactionId)
                 if (!vpToken.isNullOrEmpty()) {
                     // Success! Process the token
-                    Log.d("EUDI", "VP token received successfully")
                     return vpToken
                 }
-            } catch (e: Exception) {
-                Log.w("EUDI", "Attempt ${currentAttempt + 1} failed: ${e.message}")
-            }
+            } catch (_: Exception) {}
 
             currentAttempt++
 
             if (currentAttempt < maxRetries) {
-                Log.d("EUDI", "Waiting ${delayBetweenRetries}ms before next attempt...")
                 delay(delayBetweenRetries)
             }
         }
 
-        Log.e("EUDI", "Failed to get VP token after $maxRetries attempts")
         return null
     }
 
     private suspend fun requestVPToken(transactionId: String): String? {
-        Log.d("EUDI", "Requesting vp token...")
         val result = makeAPIRequest("$presentationURL/$transactionId", "", "application/json; charset=utf-8".toMediaType()) ?: return null
 
         // Parse JSON
         val jsonObject = JSONObject(result)
         val vpToken = jsonObject.optJSONArray("vp_token")?.optString(0, null)
 
-        Log.d("EUDI", "VP token: $vpToken")
-
         return vpToken
     }
 
     private suspend fun validateVPToken(vpToken: String): JSONObject? {
-        Log.d("EUDI", "Validation vp token...")
         val body = "device_response=$vpToken"
         val result = makeAPIRequest(valdiationURL, body, "application/x-www-form-urlencoded".toMediaType()) ?: return null
 
@@ -362,8 +263,6 @@ class TTP(
     }
 
     private suspend fun makeAPIRequest(url: String, body: String, mediaType: MediaType): String? {
-        Log.d("EUDI", "Calling api endpoint: $url")
-
         return withContext(Dispatchers.IO) {
             try {
                 val request = if (body != "") {
@@ -382,29 +281,21 @@ class TTP(
 
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) {
-                        Log.e("EUDI", "Unsuccessful response: ${response.code}")
-                        Log.e("EUDI", "Unsuccessful response: ${response.body?.string()}")
                         return@withContext null
                     }
 
                     val responseBodyString = response.body?.string()
                     if (responseBodyString.isNullOrEmpty()) {
-                        Log.e("EUDI", "Empty response body")
                         return@withContext null
                     }
-
-                    Log.d("EUDI", "Response: $responseBodyString")
 
                     return@withContext responseBodyString
                 }
             } catch (e: IOException) {
-                Log.e("EUDI", "IOException: ${e.message}", e)
                 return@withContext null
             } catch (e: JSONException) {
-                Log.e("EUDI", "JSON parsing error: ${e.message}", e)
                 return@withContext null
             } catch (e: Exception) {
-                Log.e("EUDI", "Exception: ${e.message}", e)
                 return@withContext null
             }
         }

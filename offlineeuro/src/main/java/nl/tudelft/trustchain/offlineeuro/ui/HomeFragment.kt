@@ -55,7 +55,6 @@ class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
     private val registrationReplied = CompletableDeferred<Unit>()
 
     private var pendingTxId: String? = null
-//    private val WALLET_PACKAGE = "eu.europa.ec.euidi"
 
     override fun onViewCreated(
         view: View,
@@ -134,7 +133,6 @@ class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
     @SuppressLint("RepeatOnLifecycleWrongUsage")
     private suspend fun navigateToUserHomeSafely() = withContext(Dispatchers.Main) {
         repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            Log.d("EUDI", "Navigating to home")
             // run once, then cancel this inner coroutine
             if (shouldNavigateOnResume) {
                 ParticipantHolder.user = user
@@ -161,7 +159,6 @@ class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
 
     private fun openWallet(deeplink: String) {
         val walletIntent = Intent(Intent.ACTION_VIEW, Uri.parse(deeplink)).apply {
-//            setPackage(WALLET_PACKAGE)
             addCategory(Intent.CATEGORY_BROWSABLE)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
@@ -176,7 +173,6 @@ class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
     }
 
     private val onRegister: () -> Unit = {
-        Log.d("EUDI", "on register")
         eudiFinished = true;
         registrationReplied.complete(Unit)
     }
@@ -199,11 +195,9 @@ class HomeFragment : OfflineEuroBaseFragment(R.layout.fragment_home) {
                 onReqUserVerif = { link: String, txId: String -> onReqUserVerif(link, txId) })
             communicationProtocol.scopePeers()
             val addresses = communicationProtocol.addressBookManager.getAllAddresses()
-            Log.d("EUDI", "$addresses")
         } catch (e: Exception) {
             Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
         }
-        Log.d("EUDI", "Created user")
 
         shouldNavigateOnResume = true;
         lifecycleScope.launch {

@@ -1,6 +1,5 @@
 package nl.tudelft.trustchain.offlineeuro.entity
 
-import android.util.Log
 import it.unisa.dia.gas.jpbc.Element
 import nl.tudelft.trustchain.offlineeuro.cryptography.BilinearGroup
 import nl.tudelft.trustchain.offlineeuro.cryptography.CRS
@@ -163,7 +162,6 @@ object Transaction {
     ): Boolean {
         // Check all required fields are present
         if (crs.ttpPublicKey == null) {
-            Log.d("OfflineEuro", "TTP public key is null")
             return false
         }
         // Verify TTP signed the bank's public key
@@ -173,7 +171,6 @@ object Transaction {
             bilinearGroup
         )
         if (!bankKeyVerified) {
-            Log.d("OfflineEuro", "Bank key signature is invalid")
             return false
         }
 
@@ -184,14 +181,12 @@ object Transaction {
             bilinearGroup
         )
         if (!hashVerified) {
-            Log.d("OfflineEuro", "Bank hash signature is invalid")
             return false
         }
 
         // Verify the signed message is the actual hash
         val expectedHash = "${digitalEuro.serialNumber} | ${String(digitalEuro.amountSignature.signedMessage, Charsets.UTF_8)} | ${digitalEuro.withdrawalTimestamp}".hashCode()
         if (String(digitalEuro.hashSignature.signedMessage, Charsets.UTF_8).toInt() != expectedHash) {
-            Log.d("OfflineEuro", "Bank hash is invalid")
             return false
         }
 
@@ -212,7 +207,6 @@ object Transaction {
         )
 
         if (!amountVerified) {
-            Log.d("OfflineEuro", "Bank amount signature is invalid")
             return false
         }
 
@@ -222,7 +216,6 @@ object Transaction {
             val upper = getValueUpperBound(digitalEuro)
             val shouldBe = getValueAfterFee(digitalEuro)
             if (!(digitalEuro.amount >= shouldBe) || !(digitalEuro.amount <= upper)) {
-                Log.d("OfflineEuro", "Bank amount mismatch: ${digitalEuro.amount} != ${getValueAfterFee(digitalEuro)}")
                 return false
             }
         }

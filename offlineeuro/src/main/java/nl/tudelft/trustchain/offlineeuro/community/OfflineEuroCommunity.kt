@@ -44,13 +44,9 @@ import nl.tudelft.trustchain.offlineeuro.cryptography.RandomizationElementsBytes
 import nl.tudelft.trustchain.offlineeuro.entity.TransactionDetailsBytes
 import nl.tudelft.trustchain.offlineeuro.enums.Role
 import java.math.BigInteger
-import android.util.Log
-import it.unisa.dia.gas.jpbc.Element
-import nl.tudelft.ipv8.attestation.wallet.cryptography.bonehexact.bilinearGroup
 import nl.tudelft.trustchain.offlineeuro.communication.ICommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.community.message.BankRegistrationReplyMessage
 import nl.tudelft.trustchain.offlineeuro.cryptography.SchnorrSignature
-import nl.tudelft.trustchain.offlineeuro.entity.DigitalEuro
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -58,7 +54,7 @@ object MessageID {
     const val GET_GROUP_DESCRIPTION_CRS = 9
     const val GET_GROUP_DESCRIPTION_CRS_REPLY = 10
     const val REGISTER_AT_TTP = 11
-    // TODO THIS NUMBER WAS CHANGED
+
     const val REGISTER_AT_TTP_REPLY = 26
     const val REQUEST_USER_VERIFICATION = 25
     const val USER_VERIFICATION_SUBMIT = 27
@@ -121,7 +117,6 @@ class OfflineEuroCommunity(
     }
 
     private fun onGetRegisterAtTTPReplyPacket(packet: Packet) {
-        Log.d("EUDI", "Got reply packet")
         val (_, payload) = packet.getAuthPayload(TTPRegistrationReplyPayload)
         val message = TTPRegistrationReplyMessage(payload.status)
         addMessage(message)
@@ -131,11 +126,7 @@ class OfflineEuroCommunity(
         status: String,
         userPK: ByteArray
     ) {
-        Log.d("EUDI", "Sending Register at ttp reply $status $userPK")
-        Log.d("EUDI", userPK.toString())
-
         val peers = getPeers()
-        Log.d("EUDI", "$peers")
         val peer = getPeerByPublicKeyBytes(userPK) ?: throw Exception("Completed Verification: User not found (this error shouldn't happen i think)")
         val eudiVerificationCompletedPacket =
             serializePacket(
@@ -147,9 +138,7 @@ class OfflineEuroCommunity(
     }
 
     private fun onGetRequestUserVerificationPacket(packet: Packet) {
-        Log.d("EUDI", "Got request user verification packet")
         val (_, payload) = packet.getAuthPayload(RequestUserVerificationPayload)
-        Log.d("EUDI", "The packet is: ${payload.deeplink}, ${payload.transactionId}")
         val message = RequestUserVerificationMessage(payload.transactionId, payload.deeplink)
         addMessage(message)
     }
@@ -159,8 +148,6 @@ class OfflineEuroCommunity(
         deeplink: String,
         userPK: ByteArray,
     ) {
-//        community
-        Log.d("EUDI", "Sending Request User Verification at ttp reply")
         val peer = getPeerByPublicKeyBytes(userPK) ?: throw Exception("Send request error: user not found $userPK")
         val requestUserVerificationPacket =
             serializePacket(
@@ -172,7 +159,6 @@ class OfflineEuroCommunity(
     }
 
     private fun onGetUserVerificationSubmitPacket(packet: Packet) {
-        Log.d("EUDI", "Got user submit verification packet")
         val (_, payload) = packet.getAuthPayload(UserVerificationSubmitPayload)
         val message = UserVerificationSubmitMessage(payload.transactionId)
         addMessage(message)
@@ -182,7 +168,6 @@ class OfflineEuroCommunity(
         transactionId: String,
         ttpPublicKeyBytes: ByteArray
     ) {
-        Log.d("EUDI", "Sending user submit verification message to TTP")
         val peer = getPeerByPublicKeyBytes(ttpPublicKeyBytes) ?: throw Exception("Send user verification submit error: ttp not found $ttpPublicKeyBytes")
         val userVerificationSubmitPacket =
             serializePacket(
@@ -255,7 +240,6 @@ class OfflineEuroCommunity(
         role: Role
     ) {
         val ttpPeer = getPeerByPublicKeyBytes(publicKeyTTP) ?: throw Exception("TTP not found")
-        Log.d("EUDI", "Registering at ttp")
         val registerPacket =
             serializePacket(
                 MessageID.REGISTER_AT_TTP,
@@ -271,7 +255,6 @@ class OfflineEuroCommunity(
     }
 
     fun onGetRegisterAtTTPPacket(packet: Packet) {
-        Log.d("EUDI", "Got register at ttp packet")
         val (peer, payload) = packet.getAuthPayload(TTPRegistrationPayload)
         onGetRegisterAtTTP(peer, payload)
     }
@@ -553,7 +536,6 @@ class OfflineEuroCommunity(
     }
 
     fun onTransactionPacket(packet: Packet) {
-        Log.d("OfflineEuroCommunity", "On transaction packet!")
         val (peer, payload) = packet.getAuthPayload(TransactionDetailsPayload)
         onTransaction(peer, payload)
     }
@@ -562,7 +544,6 @@ class OfflineEuroCommunity(
         peer: Peer,
         payload: TransactionDetailsPayload
     ) {
-        Log.d("OfflineEuroCommunity", "On transaction message!")
         val publicKey = payload.publicKey
         val transactionDetailsBytes = payload.transactionDetailsBytes
         val message = TransactionMessage(publicKey, transactionDetailsBytes, peer)
