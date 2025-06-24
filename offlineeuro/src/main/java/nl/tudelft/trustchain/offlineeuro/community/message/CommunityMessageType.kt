@@ -10,6 +10,9 @@ enum class CommunityMessageType {
     GroupDescriptionCRSReplyMessage,
 
     TTPRegistrationMessage,
+    TTPRegistrationReplyMessage,
+    RequestUserVerificationMessage,
+    UserVerificationSubmitMessage,
 
     BlindSignatureRandomnessRequestMessage,
     BlindSignatureRandomnessReplyMessage,
@@ -25,4 +28,6 @@ enum class CommunityMessageType {
 
     FraudControlRequestMessage,
     FraudControlReplyMessage,
+
+    BankRegistrationReplyMessage,
 }

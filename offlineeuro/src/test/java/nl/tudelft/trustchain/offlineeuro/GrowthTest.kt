@@ -4,6 +4,7 @@ import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import it.unisa.dia.gas.jpbc.Element
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.offlineeuro.sqldelight.Database
+import nl.tudelft.trustchain.offlineeuro.communication.ICommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.communication.IPV8CommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.community.OfflineEuroCommunity
 import nl.tudelft.trustchain.offlineeuro.community.message.AddressMessage
@@ -13,6 +14,7 @@ import nl.tudelft.trustchain.offlineeuro.community.message.BlindSignatureReplyMe
 import nl.tudelft.trustchain.offlineeuro.community.message.BlindSignatureRequestMessage
 import nl.tudelft.trustchain.offlineeuro.community.message.ICommunityMessage
 import nl.tudelft.trustchain.offlineeuro.cryptography.BilinearGroup
+import nl.tudelft.trustchain.offlineeuro.cryptography.CRS
 import nl.tudelft.trustchain.offlineeuro.cryptography.CRSGenerator
 import nl.tudelft.trustchain.offlineeuro.cryptography.GrothSahai
 import nl.tudelft.trustchain.offlineeuro.cryptography.GrothSahaiProof
@@ -20,10 +22,14 @@ import nl.tudelft.trustchain.offlineeuro.cryptography.PairingTypes
 import nl.tudelft.trustchain.offlineeuro.cryptography.Schnorr
 import nl.tudelft.trustchain.offlineeuro.db.AddressBookManager
 import nl.tudelft.trustchain.offlineeuro.db.DepositedEuroManager
+import nl.tudelft.trustchain.offlineeuro.db.NonRegisteredUserManager
+import nl.tudelft.trustchain.offlineeuro.db.RegisteredUserManager
 import nl.tudelft.trustchain.offlineeuro.db.WalletManager
 import nl.tudelft.trustchain.offlineeuro.entity.Bank
 import nl.tudelft.trustchain.offlineeuro.entity.DigitalEuro
+import nl.tudelft.trustchain.offlineeuro.entity.TTP
 import nl.tudelft.trustchain.offlineeuro.entity.Transaction
+import nl.tudelft.trustchain.offlineeuro.entity.Transaction.getValueAfterFee
 import nl.tudelft.trustchain.offlineeuro.entity.TransactionDetails
 import nl.tudelft.trustchain.offlineeuro.entity.User
 import nl.tudelft.trustchain.offlineeuro.entity.WalletEntry
@@ -38,18 +44,24 @@ import org.mockito.kotlin.verify
 import java.math.BigInteger
 
 class GrowthTest {
-    private val registrationNameCaptor = argumentCaptor<String>()
-    private val publicKeyCaptor = argumentCaptor<ByteArray>()
+    private val serialNumberCaptor = argumentCaptor<String>()
+    private val signatureCaptor = argumentCaptor<ICommunicationProtocol.BlindSignatureResponse>()
     private val userList = hashMapOf<User, OfflineEuroCommunity>()
     private lateinit var bank: Bank
+    private lateinit var ttp: TTP
+    private lateinit var ttpCommunity: OfflineEuroCommunity
     private lateinit var bankCommunity: OfflineEuroCommunity
     private val group: BilinearGroup = BilinearGroup(PairingTypes.F)
-    private val crs = CRSGenerator.generateCRSMap(group).first
+    private lateinit var crs: CRS
+    private lateinit var serialNumber: String
+
+
 
     private var i = 0
 
     @Test
     fun testGrowth() {
+        createTTP()
         createBank()
         val user = createTestUser()
         val euro = withdrawDigitalEuro(user, bank.name)
@@ -78,6 +90,11 @@ class GrowthTest {
             println(transactionDetails.digitalEuro.sizeInBytes())
             // Assert.assertTrue("The transaction should be valid", Transaction.validate(transactionDetails, bank.publicKey, group, crs).valid)
             entry = detailsToWalletEntry(transactionDetails, randomT)
+
+            // Update digitalEuro amount after fee
+            val digitalEuro = entry.digitalEuro
+            val valueAfterFee = getValueAfterFee(entry.digitalEuro)
+            entry = entry.copy(digitalEuro = digitalEuro.copy(amount=valueAfterFee))
         }
 
         return entry
@@ -115,25 +132,31 @@ class GrowthTest {
             addMessageToList(user, randomnessReplyMessage)
 
             // Request the signature
-            Mockito.`when`(userCommunity.getBlindSignature(challengeCaptor.capture(), any(), any()))
+            Mockito.`when`(userCommunity.getBlindSignature(challengeCaptor.capture(), any(), any(), eq(200L), serialNumberCaptor.capture()))
                 .then {
                     val challenge = challengeCaptor.lastValue
-                    val signatureRequestMessage = BlindSignatureRequestMessage(challenge, publicKeyBytes, userPeer)
+                    serialNumber = serialNumberCaptor.lastValue
+                    val signatureRequestMessage = BlindSignatureRequestMessage(challenge, publicKeyBytes, 200L, serialNumber, userPeer)
                     bankCommunity.messageList.add(signatureRequestMessage)
 
-                    verify(bankCommunity, Mockito.atLeastOnce()).sendBlindSignature(challengeCaptor.capture(), any())
-                    val signature = challengeCaptor.lastValue
+                    verify(bankCommunity, Mockito.atLeastOnce()).sendBlindSignature(signatureCaptor.capture(), any())
+                    val signature = signatureCaptor.lastValue
 
-                    val signatureMessage = BlindSignatureReplyMessage(signature)
+                    val signatureMessage = BlindSignatureReplyMessage(signature.signature,
+                                                                    signature.timestamp,
+                                                                    signature.hashSignature,
+                                                                    signature.bankPublicKey,
+                                                                    signature.bankKeySignature,
+                                                                    signature.amountSignature)
                     addMessageToList(user, signatureMessage)
                 }
         }
 
-        val withdrawnEuro = user.withdrawDigitalEuro(bankName)
+        val withdrawnEuro = user.withdrawDigitalEuro(bankName, 200L)
 
         // User must make two requests
         verify(userCommunity, Mockito.atLeastOnce()).getBlindSignatureRandomness(publicKeyBytes, bank.name.toByteArray())
-        verify(userCommunity, Mockito.atLeastOnce()).getBlindSignature(any(), eq(publicKeyBytes), eq(bank.name.toByteArray()))
+        verify(userCommunity, Mockito.atLeastOnce()).getBlindSignature(any(), eq(publicKeyBytes), eq(bank.name.toByteArray()), eq(200L), eq(serialNumber))
 
         // Bank must respond twice
         verify(bankCommunity, Mockito.atLeastOnce()).sendBlindSignatureRandomnessReply(any(), eq(userPeer))
@@ -190,6 +213,25 @@ class GrowthTest {
         bank.crs = crs
         bank.generateKeyPair()
         bankCommunity = community
+
+        val (success, signature) = ttp.registerBank(bank.publicKey, "testbank", Role.Bank)
+        Assert.assertTrue(success)
+        bank.ttpSignatureOnPublicKey = signature
+    }
+
+    private fun createTTP() {
+        val addressBookManager = createAddressManager(group)
+        val registeredUserManager = RegisteredUserManager(null, group, createDriver())
+        val nonRegisteredUserManager = NonRegisteredUserManager(null,group,createDriver())
+
+
+        ttpCommunity = prepareCommunityMock()
+        val communicationProtocol = IPV8CommunicationProtocol(addressBookManager, ttpCommunity)
+
+        Mockito.`when`(ttpCommunity.messageList).thenReturn(communicationProtocol.messageList)
+        ttp = TTP("TTP", group, communicationProtocol, null, registeredUserManager,nonRegisteredUserManager)
+        crs = ttp.crs
+        communicationProtocol.participant = ttp
     }
 
     private fun createAddressManager(group: BilinearGroup): AddressBookManager {

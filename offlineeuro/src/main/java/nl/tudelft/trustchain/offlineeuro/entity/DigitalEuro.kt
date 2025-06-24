@@ -19,25 +19,44 @@ import kotlin.String
 
 data class DigitalEuroBytes(
     val serialNumberBytes: ByteArray,
+    val amountBytes: ByteArray,
     val firstTheta1Bytes: ByteArray,
     val signatureBytes: ByteArray,
     val proofsBytes: ByteArray,
+    val withdrawalTimestampBytes: ByteArray,
+    val hashSignatureBytes: ByteArray,
+    val bankPublicKeyBytes: ByteArray,
+    val bankKeySignatureBytes: ByteArray,
+    val amountSignatureBytes: ByteArray
+
 ) : Serializable {
     fun toDigitalEuro(group: BilinearGroup): DigitalEuro {
         return DigitalEuro(
             serialNumberBytes.toString(Charsets.UTF_8),
+            amountBytes.toString(Charsets.UTF_8).toLong(),
             group.gElementFromBytes(firstTheta1Bytes),
             SchnorrSignatureSerializer.deserializeSchnorrSignatureBytes(signatureBytes)!!,
-            GrothSahaiSerializer.deserializeProofListBytes(proofsBytes, group)
+            GrothSahaiSerializer.deserializeProofListBytes(proofsBytes, group),
+            withdrawalTimestampBytes.toString(Charsets.UTF_8).toLong(),
+            hashSignatureBytes.let { SchnorrSignatureSerializer.deserializeSchnorrSignatureBytes(it)!! },
+            bankPublicKeyBytes.let { group.gElementFromBytes(it) },
+            bankKeySignatureBytes.let { SchnorrSignatureSerializer.deserializeSchnorrSignatureBytes(it)!! },
+            amountSignatureBytes.let {SchnorrSignatureSerializer.deserializeSchnorrSignatureBytes(it)!!}
         )
     }
 }
 
 data class DigitalEuro(
     val serialNumber: String,
+    val amount: Long,
     val firstTheta1: Element,
     val signature: SchnorrSignature,
     val proofs: ArrayList<GrothSahaiProof> = arrayListOf(),
+    val withdrawalTimestamp: Long,
+    val hashSignature: SchnorrSignature,
+    val bankPublicKey: Element,
+    val bankKeySignature: SchnorrSignature,
+    val amountSignature: SchnorrSignature
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -85,9 +104,15 @@ data class DigitalEuro(
         val proofBytes = GrothSahaiSerializer.serializeGrothSahaiProofs(proofs)
         return DigitalEuroBytes(
             serialNumber.toByteArray(),
+            amount.toString().toByteArray(),
             firstTheta1.toBytes(),
-            SchnorrSignatureSerializer.serializeSchnorrSignature(signature)!!,
-            proofBytes ?: ByteArray(0)
+            SchnorrSignatureSerializer.serializeSchnorrSignature(signature),
+            proofBytes ?: ByteArray(0),
+            withdrawalTimestamp.toString().toByteArray(),
+            hashSignature.let { SchnorrSignatureSerializer.serializeSchnorrSignature(it) },
+            bankPublicKey.toBytes(),
+            bankKeySignature.let { SchnorrSignatureSerializer.serializeSchnorrSignature(it) },
+            amountSignature.let { SchnorrSignatureSerializer.serializeSchnorrSignature(it) }
         )
     }
 }

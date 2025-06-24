@@ -1,8 +1,12 @@
 package nl.tudelft.trustchain.offlineeuro
 
+import android.util.Log
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import io.mockk.every
+import io.mockk.mockkStatic
 import nl.tudelft.ipv8.Peer
 import nl.tudelft.offlineeuro.sqldelight.Database
+import nl.tudelft.trustchain.offlineeuro.communication.ICommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.communication.IPV8CommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.community.OfflineEuroCommunity
 import nl.tudelft.trustchain.offlineeuro.community.message.AddressMessage
@@ -25,6 +29,7 @@ import nl.tudelft.trustchain.offlineeuro.cryptography.RandomizationElementsBytes
 import nl.tudelft.trustchain.offlineeuro.cryptography.Schnorr
 import nl.tudelft.trustchain.offlineeuro.db.AddressBookManager
 import nl.tudelft.trustchain.offlineeuro.db.DepositedEuroManager
+import nl.tudelft.trustchain.offlineeuro.db.NonRegisteredUserManager
 import nl.tudelft.trustchain.offlineeuro.db.RegisteredUserManager
 import nl.tudelft.trustchain.offlineeuro.db.WalletManager
 import nl.tudelft.trustchain.offlineeuro.entity.Address
@@ -85,6 +90,8 @@ class SystemTest {
 
     @Test
     fun withdrawSpendDepositDoubleSpendDepositTest() {
+        mockkStatic(Log::class)
+        every { Log.d(any(),any()) } returns 0
         val user = createTestUser()
 
         // Assert that the group descriptions and crs are equal
@@ -114,6 +121,7 @@ class SystemTest {
 
         val user2AddressMessage = AddressMessage(user2.name, Role.User, user2.publicKey.toBytes(), user2.name.toByteArray())
         addMessageToList(user, user2AddressMessage)
+
 
         // First Spend
         spendEuro(user, user2)
@@ -153,6 +161,8 @@ class SystemTest {
         // Prepare mock elements
         val byteArrayCaptor = argumentCaptor<ByteArray>()
         val challengeCaptor = argumentCaptor<BigInteger>()
+        val signatureCaptor = argumentCaptor<ICommunicationProtocol.BlindSignatureResponse>()
+        val serialNumberCaptor = argumentCaptor<String>()
         val userPeer = Mockito.mock(Peer::class.java)
 
         val userCommunity = userList[user]!!
@@ -170,24 +180,30 @@ class SystemTest {
             addMessageToList(user, randomnessReplyMessage)
 
             // Request the signature
-            `when`(userCommunity.getBlindSignature(challengeCaptor.capture(), any(), any())).then {
+            `when`(userCommunity.getBlindSignature(challengeCaptor.capture(), any(), any(), eq(200L), serialNumberCaptor.capture())).then {
                 val challenge = challengeCaptor.lastValue
-                val signatureRequestMessage = BlindSignatureRequestMessage(challenge, publicKeyBytes, userPeer)
+                val serialNumber = serialNumberCaptor.lastValue
+                val signatureRequestMessage = BlindSignatureRequestMessage(challenge, publicKeyBytes, 200L, serialNumber, userPeer)
                 bankCommunity.messageList.add(signatureRequestMessage)
 
-                verify(bankCommunity, atLeastOnce()).sendBlindSignature(challengeCaptor.capture(), any())
-                val signature = challengeCaptor.lastValue
+                verify(bankCommunity, atLeastOnce()).sendBlindSignature(signatureCaptor.capture(), any())
+                val signature = signatureCaptor.lastValue
 
-                val signatureMessage = BlindSignatureReplyMessage(signature)
+                val signatureMessage = BlindSignatureReplyMessage(signature.signature,
+                                                                signature.timestamp,
+                                                                signature.hashSignature,
+                                                                signature.bankPublicKey,
+                                                                signature.bankKeySignature,
+                                                                signature.amountSignature)
                 addMessageToList(user, signatureMessage)
             }
         }
 
-        val withdrawnEuro = user.withdrawDigitalEuro(bankName)
+        val withdrawnEuro = user.withdrawDigitalEuro(bankName, 200L)
 
         // User must make two requests
         verify(userCommunity, atLeastOnce()).getBlindSignatureRandomness(publicKeyBytes, bank.name.toByteArray())
-        verify(userCommunity, atLeastOnce()).getBlindSignature(any(), eq(publicKeyBytes), eq(bank.name.toByteArray()))
+        verify(userCommunity, atLeastOnce()).getBlindSignature(any(), eq(publicKeyBytes), eq(bank.name.toByteArray()), eq(200L), any())
 
         // Bank must respond twice
         verify(bankCommunity, atLeastOnce()).sendBlindSignatureRandomnessReply(any(), eq(userPeer))
@@ -264,6 +280,7 @@ class SystemTest {
 
         // Add the community for later access
         val userName = "User${userList.size}"
+        val txId = "Transaction${userList.size}"
         val community = prepareCommunityMock()
         val communicationProtocol = IPV8CommunicationProtocol(addressBookManager, community)
 
@@ -272,19 +289,22 @@ class SystemTest {
         user.crs = crs
         user.group = group
         userList[user] = community
-        ttp.registerUser(user.name, user.publicKey)
+        ttp.registeredUserManager.addRegisteredUser(user.name, user.publicKey, "test")
+        //ttp.registerUser(user.name, user.publicKey, txId, user.publicKey.toBytes())
         return user
     }
 
     private fun createTTP() {
         val addressBookManager = createAddressManager(group)
         val registeredUserManager = RegisteredUserManager(null, group, createDriver())
+        val nonRegisteredUserManager = NonRegisteredUserManager(null,group,createDriver())
+
 
         ttpCommunity = prepareCommunityMock()
         val communicationProtocol = IPV8CommunicationProtocol(addressBookManager, ttpCommunity)
 
         Mockito.`when`(ttpCommunity.messageList).thenReturn(communicationProtocol.messageList)
-        ttp = TTP("TTP", group, communicationProtocol, null, registeredUserManager)
+        ttp = TTP("TTP", group, communicationProtocol, null, registeredUserManager,nonRegisteredUserManager)
         crs = ttp.crs
         communicationProtocol.participant = ttp
     }
@@ -300,7 +320,9 @@ class SystemTest {
         bank = Bank("Bank", group, communicationProtocol, null, depositedEuroManager, runSetup = false)
         bank.crs = crs
         addressBookManager.insertAddress(Address(ttp.name, Role.TTP, ttp.publicKey, "SomeTTPPubKey".toByteArray()))
-        ttp.registerUser(bank.name, bank.publicKey)
+        val (success, signature) = ttp.registerBank(bank.publicKey, "testbank", Role.Bank)
+        bank.ttpSignatureOnPublicKey = signature
+        //ttp.registerUser(bank.name, bank.publicKey, "", bank.publicKey.toBytes())
     }
 
     private fun createAddressManager(group: BilinearGroup): AddressBookManager {

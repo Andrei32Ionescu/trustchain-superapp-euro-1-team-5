@@ -4,20 +4,31 @@ import it.unisa.dia.gas.jpbc.Element
 import nl.tudelft.trustchain.offlineeuro.cryptography.BilinearGroup
 import nl.tudelft.trustchain.offlineeuro.cryptography.GrothSahaiProof
 import nl.tudelft.trustchain.offlineeuro.cryptography.RandomizationElements
+import nl.tudelft.trustchain.offlineeuro.cryptography.SchnorrSignature
 import nl.tudelft.trustchain.offlineeuro.entity.Participant
 import nl.tudelft.trustchain.offlineeuro.entity.TransactionDetails
+import nl.tudelft.trustchain.offlineeuro.enums.Role
 import java.math.BigInteger
 
 interface ICommunicationProtocol {
     var participant: Participant
+    data class BlindSignatureResponse(
+        val signature: BigInteger,
+        val timestamp: Long,
+        val hashSignature: SchnorrSignature,
+        val bankPublicKey: ByteArray,
+        val bankKeySignature: SchnorrSignature,
+        val amountSignature: SchnorrSignature
+    )
 
     fun getGroupDescriptionAndCRS()
 
     fun register(
         userName: String,
         publicKey: Element,
-        nameTTP: String
-    )
+        nameTTP: String,
+        role: Role
+    ): SchnorrSignature?
 
     fun getBlindSignatureRandomness(
         publicKey: Element,
@@ -28,8 +39,10 @@ interface ICommunicationProtocol {
     fun requestBlindSignature(
         publicKey: Element,
         bankName: String,
-        challenge: BigInteger
-    ): BigInteger
+        challenge: BigInteger,
+        amount: Long,
+        serialNumber: String
+    ): BlindSignatureResponse
 
     fun requestTransactionRandomness(
         userNameReceiver: String,
@@ -51,4 +64,20 @@ interface ICommunicationProtocol {
         name: String,
         group: BilinearGroup
     ): Element
+
+    fun sendRegisterAtTTPReplyMessage(
+        status: String,
+        publicKey: ByteArray
+    )
+
+    fun sendRequestUserVerificationMessage(
+        transactionId: String,
+        deeplink: String,
+        publicKey: ByteArray,
+    )
+
+    fun sendUserSubmitVerificationMessage(
+        transactionId: String,
+        publicKey: ByteArray
+    )
 }

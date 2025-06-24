@@ -1,35 +1,42 @@
 createWalletTable:
 CREATE TABLE IF NOT EXISTS Wallet (
     serialNumber TEXT NOT NULL,
+    amount INTEGER NOT NULL,
     firstTheta1 BLOB NOT NULL,
     signature BLOB NOT NULL,
     previousProofs BLOB,
     secretT BLOB NOT NULL,
     transactionSignature BLOB,
-    timesSpent INTEGER NOT NULL
+    timesSpent INTEGER NOT NULL,
+    timestamp INTEGER NOT NULL,
+    hashSignature BLOB NOT NULL,
+    bankPublicKey BLOB NOT NULL,
+    bankKeySignature BLOB NOT NULL,
+    amountSignature BLOB NOT NULL
 );
 
 insertWalletEntry:
-INSERT INTO Wallet(serialNumber,
+INSERT INTO Wallet(
+    serialNumber,
+    amount,
     firstTheta1,
     signature,
     previousProofs,
     secretT,
     transactionSignature,
-    timesSpent)
-VALUES (?,
-    ?,
-    ?,
-    ?,
-    ?,
-    ?,
-    0
-);
+    timesSpent,
+    timestamp,
+    hashSignature,
+    bankPublicKey,
+    bankKeySignature,
+    amountSignature
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?,?);
 
 getWalletEntryByDescriptor:
 SELECT *
 FROM Wallet
-WHERE serialNumber LIKE ? AND firstTheta1 = ? AND signature = ?;
+WHERE serialNumber = ? AND firstTheta1 = ? AND signature = ? AND amount = ? AND previousProofs = ?;
 
 getAllWalletEntries:
 SELECT *
@@ -49,20 +56,18 @@ LIMIT ?;
 getNumberOfWalletEntriesToDoubleSpend:
 SELECT *
 FROM Wallet
-WHERE timesSpent > 0
-ORDER BY timesSpent
+WHERE timesSpent = 1
 LIMIT ?;
-
 
 getWalletEntriesToDoubleSpend:
 SELECT *
 FROM Wallet
-WHERE timesSpent > 0;
+WHERE timesSpent = 1;
 
 incrementTimesSpent:
 UPDATE Wallet
 SET timesSpent = timesSpent + 1
-WHERE serialNumber LIKE ? AND firstTheta1 = ? AND signature = ? AND previousProofs = ?;
+WHERE serialNumber = ? AND firstTheta1 = ? AND signature = ? AND previousProofs IS ?;
 
 clearWalletTable:
 DELETE FROM Wallet;

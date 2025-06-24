@@ -1,26 +1,32 @@
 package nl.tudelft.trustchain.offlineeuro.entity
 
+import android.util.Log
 import it.unisa.dia.gas.jpbc.Element
 import nl.tudelft.trustchain.offlineeuro.communication.ICommunicationProtocol
 import nl.tudelft.trustchain.offlineeuro.cryptography.BilinearGroup
 import nl.tudelft.trustchain.offlineeuro.cryptography.CRS
 import nl.tudelft.trustchain.offlineeuro.cryptography.GrothSahai
 import nl.tudelft.trustchain.offlineeuro.cryptography.RandomizationElements
+import nl.tudelft.trustchain.offlineeuro.enums.Role
 
 abstract class Participant(
     val communicationProtocol: ICommunicationProtocol,
     val name: String,
-    val onDataChangeCallback: ((String?) -> Unit)? = null
+    var onDataChangeCallback: ((String?) -> Unit)? = null,
+    val role: Role
 ) {
-    protected lateinit var privateKey: Element
+    public lateinit var privateKey: Element
     lateinit var publicKey: Element
     lateinit var group: BilinearGroup
     val randomizationElementMap: HashMap<Element, Element> = hashMapOf()
     lateinit var crs: CRS
 
     fun setUp() {
+        Log.d("EUDI", "User setp 1")
         getGroupDescriptionAndCRS()
+        Log.d("EUDI", "User setp 2")
         generateKeyPair()
+        Log.d("EUDI", "User setp 3")
         registerAtTTP()
     }
 
@@ -33,9 +39,9 @@ abstract class Participant(
         publicKey = group.g.powZn(privateKey)
     }
 
-    fun registerAtTTP() {
+    open fun registerAtTTP() {
         // TODO NAME OF TTP
-        communicationProtocol.register(name, publicKey, "TTP")
+        communicationProtocol.register(name, publicKey, "TTP", role)
     }
 
     fun generateRandomizationElements(receiverPublicKey: Element): RandomizationElements {
